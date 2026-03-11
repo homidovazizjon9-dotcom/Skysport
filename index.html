@@ -1146,7 +1146,7 @@ const INCOME_SOURCES = [
 ];
 
 let data = JSON.parse(localStorage.getItem('expenses_data') || '{"transactions":[]}');
-const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyuavGpkS7ll_PBf8JOaIFDRwUmRSNhIj8FWp3f5bWVPg2jhNYsKmEt23k41mSOwCDk1A/exec';
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOcso9ludjbW3v4UDhfyh6rJ-fpS-jQeQf4hrObXxWTJ9-H_w-UVeHBg5w6yaiDP5b_w/exec';
 let settings = JSON.parse(localStorage.getItem('expenses_settings') || '{"initialBalance":0,"monthBudget":0,"scriptUrl":""}');
 if (!settings.scriptUrl || settings.scriptUrl.includes('AKfycbwHTrn')) {
   settings.scriptUrl = DEFAULT_SCRIPT_URL;
@@ -2535,7 +2535,7 @@ async function diagnoseTx() {
   }
 
   // Step 2: test AI with raw error returned
-  steps.push('⏳ Проверяю OpenAI API...');
+  steps.push('\n⏳ Проверяю OpenAI API...');
   box.textContent = steps.join('\n');
   try {
     const res = await fetch(settings.scriptUrl, {
@@ -2543,19 +2543,26 @@ async function diagnoseTx() {
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'aiDiag' })
     });
-    const text = await res.text();
+    const rawText = await res.text();
+    steps.push('📄 Сырой ответ скрипта: ' + rawText.slice(0, 400));
     let parsed;
-    try { parsed = JSON.parse(text); } catch(e) { parsed = null; }
+    try { parsed = JSON.parse(rawText); } catch(e) { parsed = null; }
 
-    if (parsed && parsed.status === 'ok') {
-      steps.push('✅ OpenAI API: OK — модель ответила');
-      steps.push('Ответ: ' + (parsed.text || '').slice(0, 100));
-    } else if (parsed && parsed.diagError) {
-      steps.push('❌ OpenAI API ошибка:');
+    if (!parsed) {
+      steps.push('❌ Не удалось разобрать JSON — скрипт вернул не JSON');
+      steps.push('👉 Убедись что ты ПЕРЕРАЗВЕРНУЛ скрипт после обновления кода!');
+    } else if (parsed.status === 'ok' && parsed.text) {
+      steps.push('✅ OpenAI API: ОК — "' + parsed.text + '"');
+      steps.push('\n🎉 Всё работает! Нажми "Обновить" на главной.');
+    } else if (parsed.diagError) {
+      steps.push('\n❌ Ошибка OpenAI:');
       steps.push(parsed.diagError);
+    } else if (parsed.status === 'ok' && !parsed.text) {
+      steps.push('\n⚠️ Скрипт вернул {status:ok} но без text');
+      steps.push('👉 Скорее всего в скрипте старый код без блока aiAnalysis/aiDiag');
+      steps.push('Решение: скопируй код заново из ⚙️ и ПЕРЕРАЗВЕРНИ скрипт (новая версия!)');
     } else {
-      steps.push('⚠️ Неожиданный ответ от скрипта:');
-      steps.push(text.slice(0, 300));
+      steps.push('⚠️ Неожиданный ответ: ' + JSON.stringify(parsed).slice(0, 200));
     }
   } catch(e) {
     steps.push('❌ Ошибка запроса: ' + e.message);
