@@ -339,36 +339,133 @@
 
   .tx-list { display:flex; flex-direction:column; gap:10px; }
 
+  .tx-wrap {
+    animation: txIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  @keyframes txIn { from { opacity:0; transform:translateX(-16px); } }
+
   .tx-item {
     background:var(--surface);
     border:1px solid var(--border);
     border-radius:var(--radius-sm);
-    padding:14px 16px;
-    display:flex; align-items:center; gap:12px;
-    animation: txIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
-    transition: all 0.2s;
+    padding:12px 14px;
+    display:flex; align-items:center; gap:10px;
+    transition: border-color 0.2s, background 0.2s;
+    user-select:none; -webkit-user-select:none;
   }
-  @keyframes txIn { from { opacity:0; transform:translateX(-16px); } }
-  .tx-item:hover { transform:translateX(4px); border-color:rgba(124,109,250,0.3); }
+  .tx-item.selected-multi {
+    border-color:var(--accent2);
+    background:rgba(250,109,143,0.08);
+  }
 
   .tx-icon {
-    width:42px; height:42px; border-radius:12px;
+    width:40px; height:40px; border-radius:12px;
     display:flex; align-items:center; justify-content:center;
-    font-size:20px; flex-shrink:0;
+    font-size:19px; flex-shrink:0;
   }
   .tx-info { flex:1; min-width:0; }
   .tx-name { font-size:14px; font-weight:600; }
   .tx-meta { font-size:12px; color:var(--text2); margin-top:2px; }
-  .tx-amount { font-size:16px; font-weight:700; color:var(--accent2); flex-shrink:0; }
+  .tx-amount { font-size:15px; font-weight:700; flex-shrink:0; }
 
-  .tx-delete {
-    width:32px; height:32px; border-radius:8px;
-    background:rgba(250,109,143,0.1); border:none;
-    color:var(--accent2); font-size:14px; cursor:pointer;
+  .tx-btns { display:flex; gap:6px; flex-shrink:0; }
+  .tx-btn {
+    width:34px; height:34px; border-radius:10px;
+    border:none; cursor:pointer; font-size:15px;
     display:flex; align-items:center; justify-content:center;
-    opacity:0; transition:all 0.2s; flex-shrink:0;
+    transition:all 0.15s; flex-shrink:0;
   }
-  .tx-item:hover .tx-delete { opacity:1; }
+  .tx-btn-edit { background:rgba(124,109,250,0.15); color:var(--accent); }
+  .tx-btn-edit:active { background:rgba(124,109,250,0.35); }
+  .tx-btn-del  { background:rgba(250,109,143,0.15); color:var(--accent2); }
+  .tx-btn-del:active  { background:rgba(250,109,143,0.35); }
+
+  /* Multiselect bar */
+  .multiselect-bar {
+    position:fixed; bottom:70px; left:50%; transform:translateX(-50%);
+    width:calc(100% - 40px); max-width:440px;
+    background:var(--surface2); border:1px solid var(--accent2);
+    border-radius:var(--radius-sm); padding:12px 16px;
+    display:none; align-items:center; gap:12px; z-index:150;
+    box-shadow:0 8px 32px rgba(250,109,143,0.3);
+  }
+  .multiselect-bar.show { display:flex; animation: fadeUp 0.3s both; }
+  .ms-count { font-size:14px; font-weight:700; flex:1; }
+  .ms-cancel { padding:8px 14px; border-radius:8px; background:var(--surface3); border:none; color:var(--text2); font-size:13px; font-weight:600; cursor:pointer; }
+  .ms-delete { padding:8px 14px; border-radius:8px; background:var(--accent2); border:none; color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
+
+  /* ====== GOALS ====== */
+  .goals-section { padding:0 20px; animation:fadeUp 0.5s 0.2s both; }
+
+  .goal-add-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:20px; margin-bottom:16px;
+  }
+  .goal-add-card h3 {
+    font-family:'Unbounded',sans-serif; font-size:13px; color:var(--accent);
+    margin-bottom:14px; text-transform:uppercase;
+  }
+  .goal-emoji-row {
+    display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px;
+  }
+  .goal-emoji-btn {
+    font-size:24px; width:44px; height:44px; border-radius:12px;
+    background:var(--surface2); border:2px solid transparent;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:all 0.15s;
+  }
+  .goal-emoji-btn.selected { border-color:var(--accent); background:rgba(124,109,250,0.15); }
+
+  .goals-list { display:flex; flex-direction:column; gap:12px; }
+
+  .goal-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:18px;
+    animation: txIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+    position:relative; overflow:hidden;
+  }
+  .goal-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    border-radius:var(--radius) var(--radius) 0 0;
+  }
+  .goal-header { display:flex; align-items:flex-start; gap:12px; margin-bottom:14px; }
+  .goal-emoji { font-size:28px; line-height:1; }
+  .goal-info { flex:1; }
+  .goal-name { font-size:15px; font-weight:700; }
+  .goal-deadline { font-size:11px; color:var(--text2); margin-top:2px; }
+  .goal-del { background:none; border:none; color:var(--text2); font-size:16px; cursor:pointer; padding:4px; opacity:0.5; transition:opacity 0.2s; }
+  .goal-del:hover { opacity:1; color:var(--accent2); }
+
+  .goal-amounts { display:flex; justify-content:space-between; margin-bottom:8px; }
+  .goal-saved { font-size:20px; font-weight:800; font-family:'Unbounded',sans-serif; }
+  .goal-target { font-size:13px; color:var(--text2); align-self:flex-end; }
+
+  .goal-track { height:8px; border-radius:4px; background:var(--surface3); overflow:hidden; margin-bottom:6px; }
+  .goal-fill { height:100%; border-radius:4px; transition:width 1s cubic-bezier(0.34,1.56,0.64,1); }
+  .goal-pct-row { display:flex; justify-content:space-between; }
+  .goal-pct { font-size:12px; font-weight:600; }
+  .goal-remaining { font-size:12px; color:var(--text2); }
+
+  .goal-add-btn {
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    margin-top:12px; padding:10px;
+    background:var(--surface2); border:1px dashed var(--border);
+    border-radius:var(--radius-sm); cursor:pointer;
+    font-size:12px; font-weight:600; color:var(--text2);
+    transition:all 0.2s; width:100%;
+  }
+  .goal-add-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+  .goal-deposit-row { display:flex; gap:8px; margin-top:12px; }
+  .goal-deposit-input { flex:1; }
+  .goal-deposit-btn {
+    padding:10px 16px; border-radius:var(--radius-sm);
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    border:none; color:#fff; font-size:13px; font-weight:600; cursor:pointer;
+    transition:all 0.2s; white-space:nowrap;
+  }
+  .goal-deposit-btn:hover { transform:translateY(-1px); }
+  .goal-complete { text-align:center; padding:8px; font-size:20px; }
 
   /* ====== TOAST ====== */
   .toast {
@@ -491,6 +588,105 @@
   .empty-state .es-icon { font-size:48px; margin-bottom:12px; }
   .empty-state p { font-size:14px; }
 
+  /* ====== MODAL ====== */
+  .modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.7);
+    backdrop-filter:blur(8px); z-index:200;
+    display:flex; align-items:flex-end; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity 0.25s;
+  }
+  .modal-overlay.show { opacity:1; pointer-events:all; }
+
+  .modal-sheet {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius) var(--radius) 0 0;
+    width:100%; max-width:480px;
+    padding:20px 20px 40px;
+    transform:translateY(100%);
+    transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1);
+    max-height:90vh; overflow-y:auto;
+  }
+  .modal-overlay.show .modal-sheet { transform:translateY(0); }
+
+  .modal-handle {
+    width:36px; height:4px; border-radius:2px;
+    background:var(--surface3); margin:0 auto 20px;
+  }
+  .modal-title {
+    font-family:'Unbounded',sans-serif; font-size:16px; font-weight:700;
+    margin-bottom:20px; text-align:center;
+  }
+  .modal-actions {
+    display:flex; gap:10px; margin-top:20px;
+  }
+  .modal-btn {
+    flex:1; padding:14px; border-radius:var(--radius-sm);
+    font-family:'Golos Text',sans-serif; font-size:14px; font-weight:600;
+    cursor:pointer; transition:all 0.2s; border:1px solid var(--border);
+  }
+  .modal-btn.primary {
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    border:none; color:#fff;
+  }
+  .modal-btn.danger {
+    background:rgba(250,109,143,0.1); color:var(--accent2);
+    border-color:var(--accent2);
+  }
+  .modal-btn.secondary { background:var(--surface2); color:var(--text2); }
+
+  /* tx-item clickable */
+  .tx-item { cursor:pointer; }
+  .tx-item:active { transform:scale(0.98); }
+
+  /* Today widget */
+  .today-widget {
+    margin:0 20px 16px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px;
+    animation: fadeUp 0.5s 0.18s both;
+  }
+  .today-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .today-title { font-size:12px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:1px; }
+  .today-total { font-size:16px; font-weight:700; color:var(--accent2); }
+  .today-items { display:flex; flex-direction:column; gap:6px; }
+  .today-row {
+    display:flex; align-items:center; gap:10px;
+    padding:8px 10px; border-radius:10px;
+    background:var(--surface2);
+  }
+  .today-icon { font-size:16px; }
+  .today-name { flex:1; font-size:13px; font-weight:500; }
+  .today-amt { font-size:13px; font-weight:700; color:var(--accent2); }
+  .today-empty { font-size:13px; color:var(--text2); text-align:center; padding:8px; }
+
+  /* income source chips */
+  .source-grid {
+    display:grid; grid-template-columns:repeat(2,1fr); gap:8px;
+  }
+
+  /* AI insights */
+  .ai-card {
+    background:linear-gradient(135deg,rgba(124,109,250,0.1),rgba(109,250,214,0.05));
+    border:1px solid rgba(124,109,250,0.25);
+    border-radius:var(--radius); padding:16px; margin-bottom:16px;
+    animation: fadeUp 0.5s 0.25s both;
+  }
+  .ai-header { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .ai-icon { font-size:20px; }
+  .ai-title { font-size:13px; font-weight:700; color:var(--accent); }
+  .ai-text { font-size:13px; color:var(--text2); line-height:1.5; }
+  .ai-loading { display:flex; gap:4px; align-items:center; padding:4px 0; }
+  .ai-dot {
+    width:6px; height:6px; border-radius:50%;
+    background:var(--accent); animation:aiPulse 1.2s ease-in-out infinite;
+  }
+  .ai-dot:nth-child(2) { animation-delay:0.2s; }
+  .ai-dot:nth-child(3) { animation-delay:0.4s; }
+  @keyframes aiPulse { 0%,80%,100%{opacity:0.3;transform:scale(0.8)} 40%{opacity:1;transform:scale(1)} }
+
   /* ====== MONTH COMPARE ====== */
   .month-compare-wrap {
     background:var(--surface);
@@ -584,6 +780,7 @@
     <button class="tab" onclick="showTab('add',this)">+ Добавить</button>
     <button class="tab" onclick="showTab('analytics',this)">Аналитика</button>
     <button class="tab" onclick="showTab('history',this)">История</button>
+    <button class="tab" onclick="showTab('goals',this)">🎯</button>
     <button class="tab" onclick="showTab('settings',this)">⚙️</button>
   </div>
 
@@ -620,6 +817,21 @@
     </div>
 
     <div class="stats-row" id="catStatsRow"></div>
+
+    <!-- Today widget -->
+    <div class="today-widget" id="todayWidget"></div>
+
+    <!-- AI Insights -->
+    <div class="ai-card" id="aiCard" style="margin:0 20px 16px">
+      <div class="ai-header">
+        <span class="ai-icon">🤖</span>
+        <span class="ai-title">ИИ-анализ</span>
+        <button onclick="loadAiInsights()" style="margin-left:auto;background:rgba(124,109,250,0.15);border:1px solid var(--accent);color:var(--accent);padding:4px 10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer">Обновить</button>
+      </div>
+      <div class="ai-text" id="aiText">
+        <div class="ai-loading"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>
+      </div>
+    </div>
 
     <!-- Recent -->
     <div style="padding:0 20px">
@@ -658,14 +870,28 @@
           </div>
         </div>
 
-        <div class="field-group">
-          <div class="field-label">Статья расхода</div>
-          <input class="field-input" type="text" id="nameInput" placeholder="Обед, топливо, кредит...">
+        <!-- EXPENSE fields -->
+        <div id="expenseFields">
+          <div class="field-group">
+            <div class="field-label">Статья расхода</div>
+            <input class="field-input" type="text" id="nameInput" placeholder="Обед, топливо, кредит...">
+          </div>
+          <div class="field-group">
+            <div class="field-label">Категория</div>
+            <div class="category-grid" id="catGrid"></div>
+          </div>
         </div>
 
-        <div class="field-group">
-          <div class="field-label">Категория</div>
-          <div class="category-grid" id="catGrid"></div>
+        <!-- INCOME fields -->
+        <div id="incomeFields" style="display:none">
+          <div class="field-group">
+            <div class="field-label">Источник дохода</div>
+            <input class="field-input" type="text" id="incomeNameInput" placeholder="Зарплата, фриланс, продажа...">
+          </div>
+          <div class="field-group">
+            <div class="field-label">Тип источника</div>
+            <div class="source-grid" id="sourceGrid"></div>
+          </div>
         </div>
 
         <div class="field-group">
@@ -786,6 +1012,103 @@
     </div>
   </div>
 
+  <!-- ======= GOALS ======= -->
+  <div id="tab-goals" class="tab-content">
+    <div class="goals-section">
+
+      <div class="goal-add-card" id="goalFormCard" style="display:none">
+        <h3>➕ Новая цель</h3>
+        <div class="field-group" style="margin-bottom:12px">
+          <div class="field-label">Название цели</div>
+          <input class="field-input" type="text" id="goalName" placeholder="Новый телефон, отпуск...">
+        </div>
+        <div class="field-group" style="margin-bottom:12px">
+          <div class="field-label">Целевая сумма (сом)</div>
+          <input class="field-input" type="number" id="goalTarget" inputmode="decimal" placeholder="50000">
+        </div>
+        <div class="field-group" style="margin-bottom:12px">
+          <div class="field-label">Уже накоплено (сом)</div>
+          <input class="field-input" type="number" id="goalSaved" inputmode="decimal" placeholder="0">
+        </div>
+        <div class="field-group" style="margin-bottom:12px">
+          <div class="field-label">Дедлайн (необязательно)</div>
+          <input class="field-input" type="date" id="goalDeadline">
+        </div>
+        <div class="field-group" style="margin-bottom:14px">
+          <div class="field-label">Иконка</div>
+          <div class="goal-emoji-row" id="goalEmojiRow"></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="modal-btn secondary" style="flex:1" onclick="document.getElementById('goalFormCard').style.display='none'">Отмена</button>
+          <button class="modal-btn primary" style="flex:2" onclick="saveNewGoal()">Создать цель</button>
+        </div>
+      </div>
+
+      <div class="goals-list" id="goalsList"></div>
+
+      <button class="goal-add-btn" onclick="document.getElementById('goalFormCard').style.display='';document.getElementById('goalFormCard').scrollIntoView({behavior:'smooth'})">
+        ＋ Добавить цель накопления
+      </button>
+
+    </div>
+  </div>
+
+</div><!-- end .app -->
+
+<!-- MULTISELECT BAR -->
+<div class="multiselect-bar" id="multiselectBar">
+  <span class="ms-count" id="msCount">0 выбрано</span>
+  <button class="ms-cancel" onclick="cancelMultiselect()">Отмена</button>
+  <button class="ms-delete" onclick="deleteSelected()">🗑 Удалить</button>
+</div>
+
+<!-- CONFIRM DELETE MODAL -->
+<div class="modal-overlay" id="confirmModal" onclick="if(event.target===this)closeConfirm()">
+  <div class="modal-sheet" style="padding-bottom:30px">
+    <div class="modal-handle"></div>
+    <div style="text-align:center;font-size:36px;margin-bottom:12px">🗑</div>
+    <div class="modal-title" style="font-size:15px" id="confirmMsg">Удалить запись?</div>
+    <p style="text-align:center;font-size:13px;color:var(--text2);margin-bottom:20px">Это действие нельзя отменить</p>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="closeConfirm()">Отмена</button>
+      <button class="modal-btn danger" id="confirmOk">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal" onclick="closeModal(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modalTitle">Редактировать</div>
+
+    <div class="field-group" style="margin-bottom:12px">
+      <div class="field-label">Сумма</div>
+      <input class="field-input" type="number" id="editAmount" inputmode="decimal" style="font-size:22px;font-weight:700">
+    </div>
+    <div class="field-group" style="margin-bottom:12px">
+      <div class="field-label">Название</div>
+      <input class="field-input" type="text" id="editName">
+    </div>
+    <div class="field-group" style="margin-bottom:12px" id="editCatGroup">
+      <div class="field-label">Категория</div>
+      <div class="category-grid" id="editCatGrid"></div>
+    </div>
+    <div class="field-group" style="margin-bottom:12px">
+      <div class="field-label">Дата</div>
+      <input class="field-input" type="date" id="editDate">
+    </div>
+    <div class="field-group" style="margin-bottom:4px">
+      <div class="field-label">Заметка</div>
+      <input class="field-input" type="text" id="editNote" placeholder="необязательно">
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn danger" onclick="deleteFromModal()">🗑 Удалить</button>
+      <button class="modal-btn secondary" onclick="closeModalDirect()">Отмена</button>
+      <button class="modal-btn primary" onclick="saveEdit()">Сохранить</button>
+    </div>
+  </div>
 </div>
 
 <!-- TOAST -->
@@ -808,23 +1131,39 @@ const CATS = [
   { id:'other',   label:'Другое',       icon:'📦', color:'#888aaa' },
 ];
 
+const INCOME_SOURCES = [
+  { id:'salary',   label:'Зарплата',   icon:'💼' },
+  { id:'freelance',label:'Фриланс',    icon:'💻' },
+  { id:'business', label:'Бизнес',     icon:'🏢' },
+  { id:'gift_in',  label:'Подарок',    icon:'🎁' },
+  { id:'invest',   label:'Инвестиции', icon:'📈' },
+  { id:'sell',     label:'Продажа',    icon:'🛒' },
+  { id:'other_in', label:'Другое',     icon:'💵' },
+];
+
 let data = JSON.parse(localStorage.getItem('expenses_data') || '{"transactions":[]}');
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOcso9ludjbW3v4UDhfyh6rJ-fpS-jQeQf4hrObXxWTJ9-H_w-UVeHBg5w6yaiDP5b_w/exec';
 let settings = JSON.parse(localStorage.getItem('expenses_settings') || '{"initialBalance":0,"monthBudget":0,"scriptUrl":""}');
-if (!settings.scriptUrl) settings.scriptUrl = DEFAULT_SCRIPT_URL;
+if (!settings.scriptUrl || settings.scriptUrl.includes('AKfycbwHTrn')) {
+  settings.scriptUrl = DEFAULT_SCRIPT_URL;
+  localStorage.setItem('expenses_settings', JSON.stringify(settings));
+}
 let currentType = 'expense';
 let currentCat = 'food';
+let currentIncomeSource = 'salary';
 let currentPeriod = 'month';
 let filterCat = 'all';
 let pendingSync = false;
-let compareMonthA = null; // 'YYYY-MM'
+let compareMonthA = null;
 let compareMonthB = null;
+let editingTxId = null;
 
 // ==============================
 // INIT
 // ==============================
 function init() {
   renderCatGrid();
+  renderSourceGrid();
   renderFilterRow();
   setDateToday();
   loadSettings();
@@ -832,16 +1171,15 @@ function init() {
   setHeaderDate();
   renderAppsScriptCode();
 
-  // Check pending syncs
   const pending = localStorage.getItem('pending_sync');
-  if (pending) {
-    document.getElementById('syncBadge').classList.add('show');
-  }
+  if (pending) document.getElementById('syncBadge').classList.add('show');
 
-  // Auto-import from Sheets on first load if no local data
   if (data.transactions.length === 0 && settings.scriptUrl) {
     setTimeout(() => importFromSheets(true), 800);
   }
+
+  // Load AI insights after a short delay
+  setTimeout(loadAiInsights, 1200);
 }
 
 function setHeaderDate() {
@@ -883,6 +1221,7 @@ function showTab(name, el) {
   if (name === 'analytics') renderAnalytics();
   if (name === 'history') renderHistory();
   if (name === 'home') renderHome();
+  if (name === 'goals') renderGoals();
 }
 
 // ==============================
@@ -900,19 +1239,34 @@ function renderCatGrid() {
   });
 }
 
+function renderSourceGrid() {
+  const grid = document.getElementById('sourceGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  INCOME_SOURCES.forEach(src => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-chip' + (src.id === currentIncomeSource ? ' selected' : '');
+    btn.innerHTML = `<span class="cat-icon">${src.icon}</span>${src.label}`;
+    btn.onclick = () => {
+      currentIncomeSource = src.id;
+      renderSourceGrid();
+    };
+    grid.appendChild(btn);
+  });
+}
+
 function selectCat(id) {
   currentCat = id;
-  document.querySelectorAll('#catGrid .cat-chip').forEach((btn, i) => {
-    const catId = CATS.filter(c => c.id !== 'income')[i]?.id;
-    btn.classList.toggle('selected', catId === id);
-  });
+  renderCatGrid();
 }
 
 function setType(type) {
   currentType = type;
   document.getElementById('typeExpense').classList.toggle('selected', type === 'expense');
   document.getElementById('typeIncome').classList.toggle('selected', type === 'income');
-  document.getElementById('catGrid').style.opacity = type === 'income' ? '0.5' : '1';
+  document.getElementById('expenseFields').style.display = type === 'expense' ? '' : 'none';
+  document.getElementById('incomeFields').style.display = type === 'income' ? '' : 'none';
+  document.getElementById('submitBtn').textContent = type === 'income' ? 'Добавить доход' : 'Добавить запись';
 }
 
 function renderFilterRow() {
@@ -948,22 +1302,24 @@ function addAmount(n) {
 
 async function addTransaction() {
   const amount = parseFloat(document.getElementById('amountInput').value);
-  const name = document.getElementById('nameInput').value.trim();
+  const isIncome = currentType === 'income';
+  const name = isIncome
+    ? document.getElementById('incomeNameInput').value.trim()
+    : document.getElementById('nameInput').value.trim();
   const date = document.getElementById('dateInput').value;
   const note = document.getElementById('noteInput').value.trim();
 
   if (!amount || amount <= 0) { showToast('Введите сумму ❌', 'error'); return; }
-  if (!name) { showToast('Введите название ❌', 'error'); return; }
+  if (!name) { showToast(isIncome ? 'Укажите источник дохода ❌' : 'Введите название ❌', 'error'); return; }
 
-  const cat = currentType === 'income' ? 'income' : currentCat;
+  const cat = isIncome ? 'income' : currentCat;
   const tx = {
     id: Date.now().toString(),
-    date: date,
-    name: name,
+    date, name, amount,
     category: cat,
-    amount: amount,
     type: currentType,
-    note: note,
+    incomeSource: isIncome ? currentIncomeSource : undefined,
+    note,
     synced: false
   };
 
@@ -971,19 +1327,16 @@ async function addTransaction() {
   saveData();
   refreshAll();
 
-  // Try sync
-  if (settings.scriptUrl) {
-    await syncSingleTx(tx);
-  } else {
-    markPendingSync();
-  }
+  if (settings.scriptUrl) await syncSingleTx(tx);
+  else markPendingSync();
 
   // Reset form
   document.getElementById('amountInput').value = '';
   document.getElementById('nameInput').value = '';
+  document.getElementById('incomeNameInput').value = '';
   document.getElementById('noteInput').value = '';
   setDateToday();
-  showToast('Добавлено! ✓', 'success');
+  showToast(isIncome ? 'Доход добавлен! ✓' : 'Добавлено! ✓', 'success');
   showTab('home', document.querySelector('.tab'));
 }
 
@@ -1005,12 +1358,17 @@ function getStats(period = 'all') {
   });
 
   let income = 0, expense = 0;
-  const byCat = {};
+  const byCat = {};       // expenses only — for donut/bars
+  const byCatAll = {};    // all types — for month compare
   txs.forEach(tx => {
     if (tx.type === 'income') income += tx.amount;
-    else expense += tx.amount;
-    if (!byCat[tx.category]) byCat[tx.category] = 0;
-    byCat[tx.category] += tx.amount;
+    else {
+      expense += tx.amount;
+      if (!byCat[tx.category]) byCat[tx.category] = 0;
+      byCat[tx.category] += tx.amount;
+    }
+    if (!byCatAll[tx.category]) byCatAll[tx.category] = 0;
+    byCatAll[tx.category] += tx.amount;
   });
 
   const initial = settings.initialBalance || 0;
@@ -1018,7 +1376,7 @@ function getStats(period = 'all') {
   const totalExpense = data.transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const balance = initial + totalIncome - totalExpense;
 
-  return { income, expense, byCat, balance, totalIncome, totalExpense, txs, count: txs.length };
+  return { income, expense, byCat, byCatAll, balance, totalIncome, totalExpense, txs, count: txs.length };
 }
 
 // ==============================
@@ -1027,13 +1385,11 @@ function getStats(period = 'all') {
 function renderHome() {
   const s = getStats('month');
 
-  // Animate balance
   animateNumber('balanceAmount', s.balance);
   animateNumber('totalIncome', s.totalIncome);
   animateNumber('totalExpense', s.totalExpense);
   document.getElementById('totalTx').textContent = data.transactions.length;
 
-  // Budget
   if (settings.monthBudget > 0) {
     const pct = Math.min((s.expense / settings.monthBudget) * 100, 100);
     document.getElementById('budgetProgress').style.display = 'block';
@@ -1060,6 +1416,9 @@ function renderHome() {
     </div>`;
   }).join('');
 
+  // Today widget
+  renderTodayWidget();
+
   // Recent 5
   const list = document.getElementById('recentList');
   const recent = data.transactions.slice(0, 5);
@@ -1068,6 +1427,40 @@ function renderHome() {
     return;
   }
   list.innerHTML = recent.map((tx, i) => renderTxItem(tx, i)).join('');
+  attachSwipeListeners(list);
+}
+
+function renderTodayWidget() {
+  const today = new Date().toISOString().split('T')[0];
+  const todayTxs = data.transactions.filter(t => t.date === today && t.type === 'expense');
+  const todayTotal = todayTxs.reduce((s,t) => s + t.amount, 0);
+  const el = document.getElementById('todayWidget');
+  if (!el) return;
+
+  if (!todayTxs.length) {
+    el.innerHTML = `<div class="today-header">
+      <span class="today-title">Сегодня</span>
+      <span class="today-total">0 сом</span>
+    </div>
+    <div class="today-empty">Нет расходов сегодня 🎉</div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="today-header">
+    <span class="today-title">Сегодня</span>
+    <span class="today-total">${formatNum(todayTotal)} сом</span>
+  </div>
+  <div class="today-items">
+    ${todayTxs.map(tx => {
+      const cat = CATS.find(c => c.id === tx.category) || CATS[CATS.length-1];
+      return `<div class="today-row tx-item" data-id="${tx.id}" style="border-radius:10px;border:none;padding:8px 10px">
+        <span class="today-icon tx-icon" style="width:28px;height:28px;font-size:14px;border-radius:8px;background:${cat.color}22">${cat.icon}</span>
+        <span class="today-name tx-info"><div class="tx-name" style="font-size:13px">${tx.name}</div></span>
+        <span class="today-amt tx-amount" style="font-size:13px;color:var(--accent2)">${formatNum(tx.amount)} сом</span>
+      </div>`;
+    }).join('')}
+  </div>`;
+  attachSwipeListeners(el);
 }
 
 // ==============================
@@ -1335,37 +1728,363 @@ function renderHistory() {
     list.innerHTML = '<div class="empty-state"><div class="es-icon">🔍</div><p>Ничего не найдено</p></div>';
     return;
   }
-  list.innerHTML = txs.map((tx, i) => renderTxItem(tx, i, true)).join('');
+  list.innerHTML = txs.map((tx, i) => renderTxItem(tx, i)).join('');
+  attachSwipeListeners(list);
 }
 
-function renderTxItem(tx, i, showDelete = false) {
+function renderTxItem(tx, i) {
   const cat = CATS.find(c => c.id === tx.category) || CATS[CATS.length-1];
   const d = new Date(tx.date);
   const dateStr = d.toLocaleDateString('ru-RU', { day:'numeric', month:'short' });
   const sign = tx.type === 'income' ? '+' : '-';
   const color = tx.type === 'income' ? 'var(--accent3)' : 'var(--accent2)';
-  const deleteBtn = showDelete ? `<button class="tx-delete" onclick="deleteTx('${tx.id}')">✕</button>` : '';
-  return `<div class="tx-item" style="animation-delay:${i * 0.05}s">
-    <div class="tx-icon" style="background:${cat.color}22">${cat.icon}</div>
-    <div class="tx-info">
-      <div class="tx-name">${tx.name}</div>
-      <div class="tx-meta">${cat.label} · ${dateStr}${tx.note ? ' · ' + tx.note : ''}</div>
+  const isSelected = selectedTxIds.has(tx.id);
+
+  return `<div class="tx-wrap" style="animation-delay:${i*0.05}s">
+    <div class="tx-item${isSelected ? ' selected-multi' : ''}"
+         id="txitem-${tx.id}"
+         data-id="${tx.id}">
+      <div class="tx-icon" style="background:${cat.color}22">${cat.icon}</div>
+      <div class="tx-info">
+        <div class="tx-name">${tx.name}</div>
+        <div class="tx-meta">${cat.label} · ${dateStr}${tx.note ? ' · ' + tx.note : ''}</div>
+      </div>
+      <div class="tx-amount" style="color:${color}">${sign}${formatNum(tx.amount)} сом</div>
+      <div class="tx-btns">
+        <button class="tx-btn tx-btn-edit" onclick="event.stopPropagation();openEditModal('${tx.id}')">✏️</button>
+        <button class="tx-btn tx-btn-del"  onclick="event.stopPropagation();confirmDeleteTx('${tx.id}')">🗑</button>
+      </div>
     </div>
-    ${sign === '+' ? `<div class="tx-amount" style="color:${color}">${sign}${formatNum(tx.amount)} сом</div>` : `<div class="tx-amount">${sign}${formatNum(tx.amount)} сом</div>`}
-    ${deleteBtn}
   </div>`;
 }
 
 // ==============================
-// DELETE
+// MULTISELECT (long press)
 // ==============================
-function deleteTx(id) {
+let selectedTxIds = new Set();
+let multiselectMode = false;
+let longPressTimer = null;
+
+function attachSwipeListeners(container) {
+  container.querySelectorAll('.tx-item').forEach(item => {
+    const id = item.dataset.id;
+
+    item.addEventListener('pointerdown', e => {
+      // Only trigger long-press from the item body, not the buttons
+      if (e.target.closest('.tx-btns')) return;
+      longPressTimer = setTimeout(() => {
+        if (!multiselectMode) enterMultiselect();
+        toggleSelectTx(id);
+        if (navigator.vibrate) navigator.vibrate(40);
+      }, 500);
+    });
+
+    item.addEventListener('pointermove', () => clearTimeout(longPressTimer));
+    item.addEventListener('pointerup', () => clearTimeout(longPressTimer));
+    item.addEventListener('pointercancel', () => clearTimeout(longPressTimer));
+
+    // Tap in multiselect mode → toggle
+    item.addEventListener('click', e => {
+      if (e.target.closest('.tx-btns')) return;
+      if (multiselectMode) toggleSelectTx(id);
+    });
+  });
+}
+
+function enterMultiselect() {
+  multiselectMode = true;
+}
+
+function toggleSelectTx(id) {
+  if (selectedTxIds.has(id)) selectedTxIds.delete(id);
+  else selectedTxIds.add(id);
+  updateMultiselectBar();
+  const el = document.getElementById('txitem-' + id);
+  if (el) el.classList.toggle('selected-multi', selectedTxIds.has(id));
+}
+
+function updateMultiselectBar() {
+  const bar = document.getElementById('multiselectBar');
+  const count = selectedTxIds.size;
+  if (count === 0) { cancelMultiselect(); return; }
+  document.getElementById('msCount').textContent = `${count} запис${count===1?'ь':count<5?'и':'ей'}`;
+  bar.classList.add('show');
+}
+
+function cancelMultiselect() {
+  multiselectMode = false;
+  selectedTxIds.clear();
+  document.getElementById('multiselectBar').classList.remove('show');
+  document.querySelectorAll('.tx-item.selected-multi').forEach(el => el.classList.remove('selected-multi'));
+}
+
+function deleteSelected() {
+  if (selectedTxIds.size === 0) return;
+  const count = selectedTxIds.size;
+  document.getElementById('confirmMsg').textContent =
+    `Удалить ${count} запис${count===1?'ь':count<5?'и':'ей'}?`;
+  document.getElementById('confirmOk').onclick = async () => {
+    closeConfirm();
+    const toDelete = data.transactions.filter(t => selectedTxIds.has(t.id));
+    data.transactions = data.transactions.filter(t => !selectedTxIds.has(t.id));
+    saveData(); refreshAll(); renderHistory();
+    showToast(`Удалено ${count} записей`, 'error');
+    cancelMultiselect();
+    // Sync deletions to sheets
+    if (settings.scriptUrl) {
+      for (const tx of toDelete) await deleteRowInSheets(tx);
+    }
+  };
+  document.getElementById('confirmModal').classList.add('show');
+}
+
+// ==============================
+// DELETE (single) — confirm + sync to Sheets
+// ==============================
+function confirmDeleteTx(id) {
+  const tx = data.transactions.find(t => t.id === id);
+  if (!tx) return;
+  document.getElementById('confirmMsg').textContent =
+    `Удалить «${tx.name}» (${formatNum(tx.amount)} сом)?`;
+  document.getElementById('confirmOk').onclick = () => {
+    closeConfirm();
+    deleteTxConfirmed(id);
+  };
+  document.getElementById('confirmModal').classList.add('show');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.remove('show');
+}
+
+async function deleteTxConfirmed(id) {
+  const tx = data.transactions.find(t => t.id === id);
   data.transactions = data.transactions.filter(t => t.id !== id);
+  saveData(); refreshAll(); renderHistory();
+  showToast('Удалено', 'error');
+  if (tx && settings.scriptUrl) await deleteRowInSheets(tx);
+}
+
+// alias — modal's delete button calls this
+function deleteTx(id) { confirmDeleteTx(id); }
+
+async function deleteRowInSheets(tx) {
+  if (!settings.scriptUrl || !tx) return;
+  try {
+    await fetch(settings.scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        action: 'deleteRow',
+        date: tx.date,
+        name: tx.name,
+        amount: Math.abs(tx.amount)
+      })
+    });
+  } catch(e) { console.warn('Sheets delete failed', e); }
+}
+
+// ==============================
+// GOALS
+// ==============================
+const GOAL_EMOJIS = ['🎯','📱','✈️','🚗','🏠','💻','👟','🎮','📚','💍','🌴','🏋️','🎸','📷','💰'];
+let goalsData = JSON.parse(localStorage.getItem('goals_data') || '[]');
+let selectedGoalEmoji = '🎯';
+
+function saveGoalsData() {
+  localStorage.setItem('goals_data', JSON.stringify(goalsData));
+}
+
+function renderGoalEmojiPicker() {
+  const row = document.getElementById('goalEmojiRow');
+  if (!row) return;
+  row.innerHTML = GOAL_EMOJIS.map(e =>
+    `<button class="goal-emoji-btn${e===selectedGoalEmoji?' selected':''}" onclick="selectGoalEmoji('${e}')">${e}</button>`
+  ).join('');
+}
+
+function selectGoalEmoji(e) {
+  selectedGoalEmoji = e;
+  renderGoalEmojiPicker();
+}
+
+function saveNewGoal() {
+  const name = document.getElementById('goalName').value.trim();
+  const target = parseFloat(document.getElementById('goalTarget').value) || 0;
+  const saved = parseFloat(document.getElementById('goalSaved').value) || 0;
+  const deadline = document.getElementById('goalDeadline').value;
+  if (!name) { showToast('Введите название ❌', 'error'); return; }
+  if (!target || target <= 0) { showToast('Введите целевую сумму ❌', 'error'); return; }
+
+  goalsData.push({ id: Date.now().toString(), name, target, saved, deadline, emoji: selectedGoalEmoji });
+  saveGoalsData();
+
+  document.getElementById('goalName').value = '';
+  document.getElementById('goalTarget').value = '';
+  document.getElementById('goalSaved').value = '';
+  document.getElementById('goalDeadline').value = '';
+  document.getElementById('goalFormCard').style.display = 'none';
+  renderGoals();
+  showToast('Цель создана 🎯', 'success');
+}
+
+function renderGoals() {
+  renderGoalEmojiPicker();
+  const list = document.getElementById('goalsList');
+  if (!list) return;
+
+  if (!goalsData.length) {
+    list.innerHTML = `<div class="empty-state">
+      <div class="es-icon">🎯</div>
+      <p>Нет целей накопления.<br>Создай первую!</p>
+    </div>`;
+    return;
+  }
+
+  const COLORS = ['#7c6dfa','#fa6d8f','#6dfad6','#fad06d','#fa9e6d','#6daaff'];
+
+  list.innerHTML = goalsData.map((g, idx) => {
+    const pct = Math.min(Math.round((g.saved / g.target) * 100), 100);
+    const remaining = Math.max(g.target - g.saved, 0);
+    const color = COLORS[idx % COLORS.length];
+    const done = pct >= 100;
+
+    let deadlineStr = '';
+    if (g.deadline) {
+      const dl = new Date(g.deadline);
+      const daysLeft = Math.ceil((dl - new Date()) / 86400000);
+      deadlineStr = daysLeft > 0 ? `${daysLeft} дней осталось` : daysLeft === 0 ? 'Сегодня дедлайн!' : 'Дедлайн прошёл';
+    }
+
+    return `<div class="goal-card" style="animation-delay:${idx*0.08}s">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;border-radius:${20}px ${20}px 0 0;background:${color}"></div>
+      <div class="goal-header">
+        <div class="goal-emoji">${g.emoji}</div>
+        <div class="goal-info">
+          <div class="goal-name">${g.name}</div>
+          ${deadlineStr ? `<div class="goal-deadline">⏰ ${deadlineStr}</div>` : ''}
+        </div>
+        <button class="goal-del" onclick="deleteGoal('${g.id}')">✕</button>
+      </div>
+      <div class="goal-amounts">
+        <div class="goal-saved" style="color:${color}">${formatNum(g.saved)} сом</div>
+        <div class="goal-target">из ${formatNum(g.target)} сом</div>
+      </div>
+      <div class="goal-track">
+        <div class="goal-fill" style="width:${pct}%;background:linear-gradient(90deg,${color},${color}99)"></div>
+      </div>
+      <div class="goal-pct-row">
+        <div class="goal-pct" style="color:${color}">${pct}%</div>
+        <div class="goal-remaining">${done ? '✅ Цель достигнута!' : `ещё ${formatNum(remaining)} сом`}</div>
+      </div>
+      ${!done ? `<div class="goal-deposit-row">
+        <input class="field-input goal-deposit-input" type="number" inputmode="decimal"
+               id="dep-${g.id}" placeholder="Пополнить на..." style="padding:10px 14px;font-size:14px">
+        <button class="goal-deposit-btn" onclick="depositGoal('${g.id}')">+ Добавить</button>
+      </div>` : `<div class="goal-complete">🎉 Поздравляем!</div>`}
+    </div>`;
+  }).join('');
+}
+
+function depositGoal(id) {
+  const input = document.getElementById('dep-' + id);
+  const amount = parseFloat(input.value) || 0;
+  if (!amount || amount <= 0) { showToast('Введите сумму ❌', 'error'); return; }
+  const goal = goalsData.find(g => g.id === id);
+  if (!goal) return;
+  goal.saved = Math.min(goal.saved + amount, goal.target);
+  saveGoalsData();
+  renderGoals();
+  showToast(`+${formatNum(amount)} сом к цели ✓`, 'success');
+}
+
+function deleteGoal(id) {
+  if (!confirm('Удалить цель?')) return;
+  goalsData = goalsData.filter(g => g.id !== id);
+  saveGoalsData();
+  renderGoals();
+  showToast('Цель удалена', 'error');
+}
+function openEditModal(txId) {
+  const tx = data.transactions.find(t => t.id === txId);
+  if (!tx) return;
+  editingTxId = txId;
+
+  document.getElementById('modalTitle').textContent = tx.type === 'income' ? '💰 Редактировать доход' : '✏️ Редактировать расход';
+  document.getElementById('editAmount').value = tx.amount;
+  document.getElementById('editName').value = tx.name;
+  document.getElementById('editDate').value = tx.date;
+  document.getElementById('editNote').value = tx.note || '';
+
+  // Category grid in modal
+  const editCatGroup = document.getElementById('editCatGroup');
+  if (tx.type === 'income') {
+    editCatGroup.style.display = 'none';
+  } else {
+    editCatGroup.style.display = '';
+    const grid = document.getElementById('editCatGrid');
+    grid.innerHTML = '';
+    CATS.filter(c => c.id !== 'income').forEach(cat => {
+      const btn = document.createElement('button');
+      btn.className = 'cat-chip' + (cat.id === tx.category ? ' selected' : '');
+      btn.innerHTML = `<span class="cat-icon">${cat.icon}</span>${cat.label}`;
+      btn.onclick = () => {
+        grid.querySelectorAll('.cat-chip').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+      };
+      grid.appendChild(btn);
+    });
+  }
+
+  document.getElementById('editModal').classList.add('show');
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('editModal')) closeModalDirect();
+}
+
+function closeModalDirect() {
+  document.getElementById('editModal').classList.remove('show');
+  editingTxId = null;
+}
+
+function saveEdit() {
+  const tx = data.transactions.find(t => t.id === editingTxId);
+  if (!tx) return;
+
+  const amount = parseFloat(document.getElementById('editAmount').value);
+  if (!amount || amount <= 0) { showToast('Введите сумму ❌', 'error'); return; }
+
+  tx.amount = amount;
+  tx.name = document.getElementById('editName').value.trim() || tx.name;
+  tx.date = document.getElementById('editDate').value;
+  tx.note = document.getElementById('editNote').value.trim();
+  tx.synced = false;
+
+  if (tx.type === 'expense') {
+    const selected = document.querySelector('#editCatGrid .cat-chip.selected');
+    if (selected) {
+      const idx = [...document.querySelectorAll('#editCatGrid .cat-chip')].indexOf(selected);
+      tx.category = CATS.filter(c => c.id !== 'income')[idx]?.id || tx.category;
+    }
+  }
+
   saveData();
   refreshAll();
   renderHistory();
-  showToast('Удалено', 'error');
+  closeModalDirect();
+  showToast('Сохранено ✓', 'success');
 }
+
+function deleteFromModal() {
+  if (!editingTxId) return;
+  const id = editingTxId;
+  closeModalDirect();
+  // Slight delay so modal closes before confirm appears
+  setTimeout(() => confirmDeleteTx(id), 150);
+}
+
+// keep for backward compat — swipe delete calls deleteTx directly
 
 // ==============================
 // SYNC TO GOOGLE SHEETS
@@ -1572,6 +2291,23 @@ function renderAppsScriptCode() {
     });
   }
 
+  if (data.action === 'deleteRow') {
+    var values = sheet.getDataRange().getValues();
+    for (var i = values.length - 1; i >= 0; i--) {
+      var row = values[i];
+      var rowDate  = String(row[0]).trim();
+      var rowName  = String(row[1]).trim();
+      var rowAmt   = Math.abs(parseFloat(row[2]) || 0);
+      var matchDate = rowDate === String(data.date).trim();
+      var matchName = rowName.toLowerCase() === String(data.name).trim().toLowerCase();
+      var matchAmt  = Math.abs(rowAmt - Math.abs(data.amount)) < 0.01;
+      if (matchDate && matchName && matchAmt) {
+        sheet.deleteRow(i + 1);
+        break;
+      }
+    }
+  }
+
   return ContentService
     .createTextOutput(JSON.stringify({status:'ok'}))
     .setMimeType(ContentService.MimeType.JSON);
@@ -1585,7 +2321,6 @@ function doGet(e) {
     var sheet = ss.getActiveSheet();
     var values = sheet.getDataRange().getValues();
 
-    // Skip header row if first cell looks like a header
     var start = 0;
     if (values.length > 0) {
       var firstCell = String(values[0][0]).toLowerCase();
@@ -1668,13 +2403,97 @@ function clearData() {
 }
 
 // ==============================
+// AI INSIGHTS
+// ==============================
+async function loadAiInsights() {
+  const el = document.getElementById('aiText');
+  if (!el) return;
+  el.innerHTML = '<div class="ai-loading"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>';
+
+  if (data.transactions.length < 3) {
+    el.textContent = 'Добавьте больше записей, чтобы получить анализ 📊';
+    return;
+  }
+
+  // Build summary for Claude
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const prevMonth = (() => {
+    const d = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  })();
+
+  const txThis = data.transactions.filter(t => t.date.startsWith(thisMonth) && t.type === 'expense');
+  const txPrev = data.transactions.filter(t => t.date.startsWith(prevMonth) && t.type === 'expense');
+
+  const sumThis = txThis.reduce((s,t) => s+t.amount, 0);
+  const sumPrev = txPrev.reduce((s,t) => s+t.amount, 0);
+
+  const byCat = {};
+  txThis.forEach(t => { byCat[t.category] = (byCat[t.category]||0) + t.amount; });
+  const topCats = Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,3)
+    .map(([id,v]) => `${CATS.find(c=>c.id===id)?.label||id}: ${formatNum(v)} сом`).join(', ');
+
+  const today = now.toISOString().split('T')[0];
+  const todaySum = data.transactions.filter(t=>t.date===today&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
+
+  const prompt = `Ты финансовый помощник. Дай краткий анализ (2-3 предложения, без markdown, на русском) расходов пользователя:
+- Этот месяц: ${formatNum(sumThis)} сом
+- Прошлый месяц: ${formatNum(sumPrev)} сом  
+- Топ категории этого месяца: ${topCats || 'нет данных'}
+- Сегодня потрачено: ${formatNum(todaySum)} сом
+- Всего записей: ${data.transactions.length}
+${settings.monthBudget ? `- Месячный бюджет: ${formatNum(settings.monthBudget)} сом` : ''}
+Дай конкретный совет по экономии или наблюдение. Будь дружелюбным и кратким.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const json = await res.json();
+    const text = json.content?.[0]?.text || 'Не удалось получить анализ';
+    el.textContent = text;
+  } catch(e) {
+    el.textContent = 'ИИ-анализ временно недоступен. Проверьте подключение к интернету.';
+  }
+}
+
+// ==============================
 // SERVICE WORKER
 // ==============================
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(() => console.log('SW registered'))
-      .catch(e => console.log('SW error', e));
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js');
+
+      // When a new SW is found — activate it immediately
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // New version ready — reload to apply
+            newWorker.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+      });
+
+      // Reload once new SW has taken control
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) { refreshing = true; window.location.reload(); }
+      });
+
+      // Force check for update every time page loads
+      reg.update();
+    } catch(e) {
+      console.log('SW error', e);
+    }
   });
 }
 
