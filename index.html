@@ -1146,7 +1146,7 @@ const INCOME_SOURCES = [
 ];
 
 let data = JSON.parse(localStorage.getItem('expenses_data') || '{"transactions":[]}');
-const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOcso9ludjbW3v4UDhfyh6rJ-fpS-jQeQf4hrObXxWTJ9-H_w-UVeHBg5w6yaiDP5b_w/exec';
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVWIegeCnQ5aZCHd4e1Pmh9RrArdT3yl3rhZe1m5Md5YOKTk9NUMpIv1WTqUnFrR9o/exec';
 let settings = JSON.parse(localStorage.getItem('expenses_settings') || '{"initialBalance":0,"monthBudget":0,"scriptUrl":""}');
 if (!settings.scriptUrl || settings.scriptUrl.includes('AKfycbwHTrn')) {
   settings.scriptUrl = DEFAULT_SCRIPT_URL;
