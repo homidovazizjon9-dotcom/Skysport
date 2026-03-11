@@ -1146,7 +1146,7 @@ const INCOME_SOURCES = [
 ];
 
 let data = JSON.parse(localStorage.getItem('expenses_data') || '{"transactions":[]}');
-const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxraEuYSc8DyJPFAByw_inwBNz0V3ImDPcZwxm3HJCra0GcLOuK60z5JCo1SjYvvD_G3Q/exec';
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyGAWT5fyrpTWauPDeHvcx8-xk0ZWPk1rjB-xhq8wSUwlhG09USNXiQyUciR9rMHswFCw/exec';
 let settings = JSON.parse(localStorage.getItem('expenses_settings') || '{"initialBalance":0,"monthBudget":0,"scriptUrl":""}');
 if (!settings.scriptUrl || settings.scriptUrl.includes('AKfycbwHTrn')) {
   settings.scriptUrl = DEFAULT_SCRIPT_URL;
@@ -2313,7 +2313,7 @@ function renderAppsScriptCode() {
   }
 
   // ← Вставь свой ключ сюда: platform.openai.com → API keys
-  var OPENAI_KEY = 'YOUR_OPENAI_KEY';
+  var OPENAI_KEY = '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';
 
   if (data.action === 'aiAnalysis' || data.action === 'aiDiag') {
     var testPrompt = data.action === 'aiDiag'
@@ -2356,7 +2356,7 @@ function renderAppsScriptCode() {
 function doGet(e) {
   var action = e && e.parameter && e.parameter.action;
   // ← Вставь свой ключ сюда: platform.openai.com → API keys
-  var OPENAI_KEY = 'YOUR_OPENAI_KEY';
+  var OPENAI_KEY = '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';
 
   if (action === 'getRows') {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
