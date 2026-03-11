@@ -480,6 +480,71 @@
   }
   .empty-state .es-icon { font-size:48px; margin-bottom:12px; }
   .empty-state p { font-size:14px; }
+
+  /* ====== MONTH COMPARE ====== */
+  .month-compare-wrap {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:20px; margin-bottom:20px;
+    overflow:hidden;
+  }
+  .month-selector {
+    display:flex; gap:8px; margin-bottom:16px; overflow-x:auto; scrollbar-width:none;
+  }
+  .month-selector::-webkit-scrollbar { display:none; }
+  .month-pill {
+    flex-shrink:0; padding:6px 14px; border-radius:20px;
+    background:var(--surface2); border:1px solid var(--surface3);
+    color:var(--text2); font-size:12px; font-weight:600; cursor:pointer;
+    transition:all 0.2s;
+  }
+  .month-pill.active-a { background:rgba(124,109,250,0.2); border-color:var(--accent); color:var(--accent); }
+  .month-pill.active-b { background:rgba(250,109,143,0.2); border-color:var(--accent2); color:var(--accent2); }
+
+  .compare-legend {
+    display:flex; gap:16px; margin-bottom:14px;
+  }
+  .cl-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text2); }
+  .cl-dot { width:10px; height:10px; border-radius:3px; }
+
+  .compare-bars { display:flex; flex-direction:column; gap:10px; }
+  .cmp-row { }
+  .cmp-row-header { display:flex; justify-content:space-between; margin-bottom:4px; }
+  .cmp-row-name { font-size:12px; color:var(--text2); }
+  .cmp-row-vals { display:flex; gap:10px; font-size:12px; font-weight:600; }
+  .cmp-val-a { color:var(--accent); }
+  .cmp-val-b { color:var(--accent2); }
+  .cmp-tracks { display:flex; flex-direction:column; gap:3px; }
+  .cmp-track {
+    height:5px; border-radius:3px; background:var(--surface3); overflow:hidden;
+  }
+  .cmp-fill-a {
+    height:100%; border-radius:3px;
+    background:linear-gradient(90deg, var(--accent), rgba(124,109,250,0.5));
+    transition: width 0.8s cubic-bezier(0.34,1.56,0.64,1); width:0%;
+  }
+  .cmp-fill-b {
+    height:100%; border-radius:3px;
+    background:linear-gradient(90deg, var(--accent2), rgba(250,109,143,0.5));
+    transition: width 0.8s cubic-bezier(0.34,1.56,0.64,1); width:0%;
+  }
+
+  .compare-totals {
+    display:flex; gap:10px; margin-top:16px; padding-top:16px;
+    border-top:1px solid var(--surface3);
+  }
+  .ct-item {
+    flex:1; background:var(--surface2); border-radius:var(--radius-sm);
+    padding:12px; text-align:center;
+  }
+  .ct-label { font-size:11px; color:var(--text2); margin-bottom:4px; }
+  .ct-val { font-size:16px; font-weight:700; }
+  .ct-diff {
+    font-size:11px; margin-top:3px; font-weight:600;
+  }
+  .ct-diff.better { color:var(--accent3); }
+  .ct-diff.worse { color:var(--accent2); }
 </style>
 </head>
 <body>
@@ -514,7 +579,7 @@
       <div class="balance-label">Остаток</div>
       <div class="balance-amount">
         <span id="balanceAmount">0</span>
-        <span class="balance-currency">₽</span>
+        <span class="balance-currency">сом</span>
       </div>
       <div id="budgetProgress" class="budget-progress" style="display:none">
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)">
@@ -526,11 +591,11 @@
       <div class="balance-meta">
         <div class="balance-meta-item">
           <div class="bm-label">Доходы</div>
-          <div class="bm-val income">+<span id="totalIncome">0</span> ₽</div>
+          <div class="bm-val income">+<span id="totalIncome">0</span> сом</div>
         </div>
         <div class="balance-meta-item">
           <div class="bm-label">Расходы</div>
-          <div class="bm-val expense">-<span id="totalExpense">0</span> ₽</div>
+          <div class="bm-val expense">-<span id="totalExpense">0</span> сом</div>
         </div>
         <div class="balance-meta-item">
           <div class="bm-label">Операций</div>
@@ -633,6 +698,23 @@
       <div class="section-title">Топ категорий</div>
       <div class="cat-bars" id="catBarsDetail"></div>
 
+      <!-- MONTH COMPARISON -->
+      <div class="month-compare-wrap">
+        <div class="section-title">Сравнение месяцев</div>
+        <div class="month-selector" id="monthSelectorA">
+          <div style="font-size:11px;color:var(--accent);font-weight:600;display:flex;align-items:center;padding-right:4px">A:</div>
+        </div>
+        <div class="month-selector" id="monthSelectorB">
+          <div style="font-size:11px;color:var(--accent2);font-weight:600;display:flex;align-items:center;padding-right:4px">B:</div>
+        </div>
+        <div class="compare-legend">
+          <div class="cl-item"><div class="cl-dot" style="background:var(--accent)"></div><span id="compareLabelA">—</span></div>
+          <div class="cl-item"><div class="cl-dot" style="background:var(--accent2)"></div><span id="compareLabelB">—</span></div>
+        </div>
+        <div class="compare-bars" id="compareBars"></div>
+        <div class="compare-totals" id="compareTotals"></div>
+      </div>
+
     </div>
   </div>
 
@@ -652,11 +734,11 @@
       <div class="settings-card">
         <h3>💰 Бюджет</h3>
         <div class="settings-row">
-          <label>Начальная сумма (₽)</label>
+          <label>Начальная сумма (сом)</label>
           <input class="field-input" type="number" id="initialBalance" placeholder="5000" oninput="saveSettings()">
         </div>
         <div class="settings-row">
-          <label>Месячный бюджет (₽)</label>
+          <label>Месячный бюджет (сом)</label>
           <input class="field-input" type="number" id="monthBudget" placeholder="необязательно" oninput="saveSettings()">
         </div>
       </div>
@@ -712,12 +794,16 @@ const CATS = [
 ];
 
 let data = JSON.parse(localStorage.getItem('expenses_data') || '{"transactions":[]}');
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwHTrnCfGpFTWF-veatmhKhxwcCyIMHti75RuyW1hgMDjHuGDQivgkzKjuQlZ277U5QRw/exec';
 let settings = JSON.parse(localStorage.getItem('expenses_settings') || '{"initialBalance":0,"monthBudget":0,"scriptUrl":""}');
+if (!settings.scriptUrl) settings.scriptUrl = DEFAULT_SCRIPT_URL;
 let currentType = 'expense';
 let currentCat = 'food';
 let currentPeriod = 'month';
 let filterCat = 'all';
 let pendingSync = false;
+let compareMonthA = null; // 'YYYY-MM'
+let compareMonthB = null;
 
 // ==============================
 // INIT
@@ -950,7 +1036,7 @@ function renderHome() {
     return `<div class="stat-chip">
       <div class="sc-icon">${cat.icon}</div>
       <div class="sc-label">${cat.label}</div>
-      <div class="sc-val" style="color:${cat.color}">${formatNum(val)} ₽</div>
+      <div class="sc-val" style="color:${cat.color}">${formatNum(val)} сом</div>
     </div>`;
   }).join('');
 
@@ -978,6 +1064,10 @@ function renderAnalytics() {
 
   // Cat bars
   renderCatBars(s.byCat, s.expense);
+
+  // Month comparison
+  renderMonthSelectors();
+  renderMonthCompare();
 }
 
 function renderDonut(byCat) {
@@ -1016,7 +1106,7 @@ function renderDonut(byCat) {
     li.innerHTML = `
       <div class="legend-dot" style="background:${cat.color}"></div>
       <span class="legend-text">${cat.icon} ${cat.label}</span>
-      <span class="legend-val">${formatNum(val)}₽</span>`;
+      <span class="legend-val">${formatNum(val)}сом</span>`;
     legend.appendChild(li);
   });
 }
@@ -1056,7 +1146,7 @@ function renderCatBars(byCat, total) {
     return `<div class="cat-bar-item">
       <div class="cat-bar-header">
         <div class="cat-bar-name">${cat.icon} ${cat.label}</div>
-        <div class="cat-bar-val">${formatNum(val)} ₽ (${pct}%)</div>
+        <div class="cat-bar-val">${formatNum(val)} сом (${pct}%)</div>
       </div>
       <div class="cat-bar-track">
         <div class="cat-bar-fill" style="width:${pct}%;background:${cat.color}"></div>
@@ -1070,6 +1160,141 @@ function setPeriod(p, el) {
   document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
   if (el) el.classList.add('active');
   renderAnalytics();
+}
+
+// ==============================
+// MONTH COMPARE
+// ==============================
+function getAvailableMonths() {
+  const months = new Set();
+  data.transactions.forEach(tx => {
+    months.add(tx.date.slice(0,7));
+  });
+  return [...months].sort().reverse();
+}
+
+function renderMonthSelectors() {
+  const months = getAvailableMonths();
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const prevMonth = (() => {
+    const d = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  })();
+
+  // Default selection
+  if (!compareMonthA) compareMonthA = months.includes(thisMonth) ? thisMonth : (months[0] || thisMonth);
+  if (!compareMonthB) compareMonthB = months.includes(prevMonth) ? prevMonth : (months[1] || months[0] || prevMonth);
+
+  const MONTH_NAMES = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+
+  function buildRow(containerId, activeKey, setFn, cls) {
+    const container = document.getElementById(containerId);
+    // Keep the label element, rebuild pills
+    const label = container.firstElementChild;
+    container.innerHTML = '';
+    container.appendChild(label);
+
+    // Always show last 12 months minimum
+    const allMonths = new Set(months);
+    const d = new Date();
+    for (let i = 0; i < 12; i++) {
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      allMonths.add(key);
+      d.setMonth(d.getMonth()-1);
+    }
+    [...allMonths].sort().reverse().forEach(m => {
+      const [y, mo] = m.split('-');
+      const btn = document.createElement('button');
+      btn.className = 'month-pill' + (m === activeKey ? ' ' + cls : '');
+      btn.textContent = MONTH_NAMES[parseInt(mo)-1] + ' ' + y;
+      btn.onclick = () => { setFn(m); renderMonthCompare(); renderMonthSelectors(); };
+      container.appendChild(btn);
+    });
+  }
+
+  buildRow('monthSelectorA', compareMonthA, v => compareMonthA = v, 'active-a');
+  buildRow('monthSelectorB', compareMonthB, v => compareMonthB = v, 'active-b');
+}
+
+function getMonthTotals(monthKey) {
+  const txs = data.transactions.filter(t => t.date.startsWith(monthKey) && t.type === 'expense');
+  const byCat = {};
+  let total = 0;
+  txs.forEach(t => {
+    if (!byCat[t.category]) byCat[t.category] = 0;
+    byCat[t.category] += t.amount;
+    total += t.amount;
+  });
+  return { byCat, total };
+}
+
+function renderMonthCompare() {
+  const MONTH_NAMES = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+
+  const fmtLabel = (key) => {
+    if (!key) return '—';
+    const [y, m] = key.split('-');
+    return MONTH_NAMES[parseInt(m)-1] + ' ' + y;
+  };
+
+  document.getElementById('compareLabelA').textContent = fmtLabel(compareMonthA);
+  document.getElementById('compareLabelB').textContent = fmtLabel(compareMonthB);
+
+  const a = getMonthTotals(compareMonthA);
+  const b = getMonthTotals(compareMonthB);
+
+  // All cats in both months
+  const allCats = new Set([...Object.keys(a.byCat), ...Object.keys(b.byCat)]);
+  const max = Math.max(...[...allCats].map(c => Math.max(a.byCat[c]||0, b.byCat[c]||0)), 1);
+
+  const barsEl = document.getElementById('compareBars');
+  if (!allCats.size) {
+    barsEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2);font-size:13px">Нет данных для сравнения</div>';
+    document.getElementById('compareTotals').innerHTML = '';
+    return;
+  }
+
+  const sorted = [...allCats].sort((x,y) => ((b.byCat[y]||0)+(a.byCat[y]||0)) - ((b.byCat[x]||0)+(a.byCat[x]||0)));
+
+  barsEl.innerHTML = sorted.map(catId => {
+    const cat = CATS.find(c => c.id === catId) || CATS[CATS.length-1];
+    const va = a.byCat[catId] || 0;
+    const vb = b.byCat[catId] || 0;
+    const pa = Math.round((va/max)*100);
+    const pb = Math.round((vb/max)*100);
+    return `<div class="cmp-row">
+      <div class="cmp-row-header">
+        <div class="cmp-row-name">${cat.icon} ${cat.label}</div>
+        <div class="cmp-row-vals">
+          <span class="cmp-val-a">${formatNum(va)}</span>
+          <span style="color:var(--text2)">vs</span>
+          <span class="cmp-val-b">${formatNum(vb)}</span>
+        </div>
+      </div>
+      <div class="cmp-tracks">
+        <div class="cmp-track"><div class="cmp-fill-a" style="width:${pa}%"></div></div>
+        <div class="cmp-track"><div class="cmp-fill-b" style="width:${pb}%"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Totals comparison
+  const diff = a.total - b.total;
+  const diffPct = b.total > 0 ? Math.round(Math.abs(diff)/b.total*100) : 0;
+  const diffText = diff === 0 ? '= одинаково' : diff > 0 ? `▲ +${diffPct}% больше` : `▼ ${diffPct}% меньше`;
+  const diffCls = diff <= 0 ? 'better' : 'worse';
+
+  document.getElementById('compareTotals').innerHTML = `
+    <div class="ct-item">
+      <div class="ct-label" style="color:var(--accent)">${fmtLabel(compareMonthA)}</div>
+      <div class="ct-val">${formatNum(a.total)} сом</div>
+    </div>
+    <div class="ct-item">
+      <div class="ct-label" style="color:var(--accent2)">${fmtLabel(compareMonthB)}</div>
+      <div class="ct-val">${formatNum(b.total)} сом</div>
+      <div class="ct-diff ${diffCls}">${diffText}</div>
+    </div>`;
 }
 
 // ==============================
@@ -1106,7 +1331,7 @@ function renderTxItem(tx, i, showDelete = false) {
       <div class="tx-name">${tx.name}</div>
       <div class="tx-meta">${cat.label} · ${dateStr}${tx.note ? ' · ' + tx.note : ''}</div>
     </div>
-    ${sign === '+' ? `<div class="tx-amount" style="color:${color}">${sign}${formatNum(tx.amount)} ₽</div>` : `<div class="tx-amount">${sign}${formatNum(tx.amount)} ₽</div>`}
+    ${sign === '+' ? `<div class="tx-amount" style="color:${color}">${sign}${formatNum(tx.amount)} сом</div>` : `<div class="tx-amount">${sign}${formatNum(tx.amount)} сом</div>`}
     ${deleteBtn}
   </div>`;
 }
