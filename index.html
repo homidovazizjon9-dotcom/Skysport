@@ -567,10 +567,15 @@
       <div class="header-title">Мои расходы</div>
       <div class="header-sub" id="headerDate"></div>
     </div>
-    <button class="sync-btn" onclick="syncToSheets()" title="Синхронизировать с Google Sheets">
-      <span id="syncIcon">☁️</span>
-      <span class="sync-badge" id="syncBadge"></span>
-    </button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="sync-btn" onclick="importFromSheets()" title="Загрузить данные из Google Sheets" id="importBtn">
+        <span id="importIcon">📥</span>
+      </button>
+      <button class="sync-btn" onclick="syncToSheets()" title="Отправить новые записи в Google Sheets">
+        <span id="syncIcon">☁️</span>
+        <span class="sync-badge" id="syncBadge"></span>
+      </button>
+    </div>
   </div>
 
   <!-- TABS -->
@@ -831,6 +836,11 @@ function init() {
   const pending = localStorage.getItem('pending_sync');
   if (pending) {
     document.getElementById('syncBadge').classList.add('show');
+  }
+
+  // Auto-import from Sheets on first load if no local data
+  if (data.transactions.length === 0 && settings.scriptUrl) {
+    setTimeout(() => importFromSheets(true), 800);
   }
 }
 
@@ -1438,15 +1448,117 @@ function markPendingSync() {
 }
 
 // ==============================
+// IMPORT FROM GOOGLE SHEETS
+// ==============================
+const CAT_MAP = {
+  'еда': 'food', 'food': 'food',
+  'машина': 'car', 'car': 'car', 'авто': 'car',
+  'развлечения': 'fun', 'fun': 'fun',
+  'здоровье': 'health', 'health': 'health',
+  'подарок': 'gift', 'gift': 'gift',
+  'кредит': 'credit', 'credit': 'credit',
+  'дом': 'home', 'home': 'home',
+  'одежда': 'cloth', 'cloth': 'cloth',
+  'доход': 'income', 'income': 'income',
+};
+
+function mapCategory(str) {
+  if (!str) return 'other';
+  const key = str.trim().toLowerCase();
+  return CAT_MAP[key] || 'other';
+}
+
+async function importFromSheets(silent = false) {
+  if (!settings.scriptUrl) {
+    if (!silent) showToast('Укажите URL скрипта в настройках', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('importBtn');
+  const icon = document.getElementById('importIcon');
+  btn.classList.add('syncing');
+  icon.textContent = '⏳';
+  if (!silent) showToast('Загружаю данные...', 'success');
+
+  try {
+    const url = settings.scriptUrl + '?action=getRows';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    const json = await res.json();
+    if (!json.rows || !Array.isArray(json.rows)) throw new Error('Нет данных');
+
+    const rows = json.rows;
+    if (rows.length === 0) {
+      showToast('Таблица пуста', 'error');
+      btn.classList.remove('syncing');
+      icon.textContent = '📥';
+      return;
+    }
+
+    // Convert rows to transactions, skip duplicates by date+name+amount
+    const existing = new Set(
+      data.transactions.map(t => `${t.date}|${t.name}|${t.amount}`)
+    );
+
+    let added = 0;
+    const newTxs = [];
+
+    rows.forEach((row, i) => {
+      // Expected columns: [date, name, amount, category, type, note]
+      const date   = String(row[0] || '').trim();
+      const name   = String(row[1] || '').trim();
+      const amount = Math.abs(parseFloat(row[2]) || 0);
+      const catRaw = String(row[3] || '').trim();
+      const typeRaw = String(row[4] || 'Расход').trim().toLowerCase();
+      const note   = String(row[5] || '').trim();
+
+      if (!date || !name || !amount) return; // skip empty rows
+
+      const type = (typeRaw === 'доход' || typeRaw === 'income') ? 'income' : 'expense';
+      const category = type === 'income' ? 'income' : mapCategory(catRaw);
+
+      const key = `${date}|${name}|${amount}`;
+      if (existing.has(key)) return; // skip duplicate
+
+      newTxs.push({
+        id: 'sheets_' + Date.now() + '_' + i,
+        date, name, amount, category, type, note,
+        synced: true
+      });
+      existing.add(key);
+      added++;
+    });
+
+    if (added > 0) {
+      // Merge: sheets data first (older), then local
+      data.transactions = [...newTxs, ...data.transactions]
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      saveData();
+      refreshAll();
+      showToast(`Загружено ${added} записей из таблицы ✓`, 'success');
+    } else {
+      if (!silent) showToast('Новых данных нет — всё актуально ✓', 'success');
+    }
+
+  } catch (e) {
+    console.error(e);
+    if (!silent) showToast('Ошибка загрузки: обновите Apps Script ❌', 'error');
+  }
+
+  btn.classList.remove('syncing');
+  icon.textContent = '📥';
+}
+
+// ==============================
 // APPS SCRIPT CODE
 // ==============================
 function renderAppsScriptCode() {
   const code = `function doPost(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getActiveSheet();
-  
   var data = JSON.parse(e.postData.contents);
-  
+
   if (data.action === 'addRows') {
     data.rows.forEach(function(row) {
       sheet.appendRow([
@@ -1459,16 +1571,39 @@ function renderAppsScriptCode() {
       ]);
     });
   }
-  
+
   return ContentService
     .createTextOutput(JSON.stringify({status:'ok'}))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 function doGet(e) {
+  var action = e && e.parameter && e.parameter.action;
+
+  if (action === 'getRows') {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getActiveSheet();
+    var values = sheet.getDataRange().getValues();
+
+    // Skip header row if first cell looks like a header
+    var start = 0;
+    if (values.length > 0) {
+      var firstCell = String(values[0][0]).toLowerCase();
+      if (firstCell === 'дата' || firstCell === 'date') start = 1;
+    }
+
+    var rows = values.slice(start).filter(function(r) {
+      return r[0] && r[1] && r[2];
+    });
+
+    return ContentService
+      .createTextOutput(JSON.stringify({status:'ok', rows: rows}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   return ContentService
-    .createTextOutput('OK')
-    .setMimeType(ContentService.MimeType.TEXT);
+    .createTextOutput(JSON.stringify({status:'ok'}))
+    .setMimeType(ContentService.MimeType.JSON);
 }`;
   document.getElementById('appsScriptCode').textContent = code;
 }
