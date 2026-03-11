@@ -2313,7 +2313,7 @@ function renderAppsScriptCode() {
   }
 
   // ← Вставь свой ключ сюда: platform.openai.com → API keys
-  var OPENAI_KEY = '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';
+  var OPENAI_KEY = 'YOUR_OPENAI_KEY';
 
   if (data.action === 'aiAnalysis' || data.action === 'aiDiag') {
     var testPrompt = data.action === 'aiDiag'
@@ -2356,7 +2356,7 @@ function renderAppsScriptCode() {
 function doGet(e) {
   var action = e && e.parameter && e.parameter.action;
   // ← Вставь свой ключ сюда: platform.openai.com → API keys
-  var OPENAI_KEY = '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';
+  var OPENAI_KEY = 'YOUR_OPENAI_KEY';
 
   if (action === 'getRows') {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
