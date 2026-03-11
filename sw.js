@@ -1,8 +1,10 @@
-const CACHE_NAME = 'rashody-v1';
+const CACHE_NAME = 'rashody-v3';
 const ASSETS = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 // Install — cache all assets
@@ -13,7 +15,7 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
-// Activate — remove old caches
+// Activate — remove ALL old caches immediately
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -23,17 +25,33 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
-// Fetch — cache-first for assets, network-first for Google APIs
+// Fetch — network-first for HTML, cache-first for static
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Always go to network for Google APIs (sync)
-  if (url.hostname.includes('google') || url.hostname.includes('googleapis')) {
-    e.respondWith(fetch(e.request).catch(() => new Response('', { status: 503 })));
+  // Always network for Google APIs and fonts
+  if (url.hostname.includes('google') || url.hostname.includes('googleapis') || url.hostname.includes('fonts')) {
+    e.respondWith(
+      fetch(e.request).catch(() => new Response('', { status: 503 }))
+    );
     return;
   }
 
-  // Cache-first for everything else
+  // Network-first for HTML — updates always load immediately
+  if (e.request.destination === 'document' || url.pathname.endsWith('.html') || url.pathname.endsWith('/')) {
+    e.respondWith(
+      fetch(e.request)
+        .then(response => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+          return response;
+        })
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  // Cache-first for icons, manifest etc
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
