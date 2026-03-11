@@ -993,8 +993,12 @@
         <div style="margin-top:12px">
           <div style="font-size:13px;color:var(--text2);margin-bottom:8px">📋 Apps Script код (вставьте в Google Таблицу):</div>
           <div class="code-block" id="appsScriptCode"></div>
-          <button class="copy-btn" onclick="copyAppsScript()">📋 Скопировать Apps Script</button>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="copy-btn" style="flex:1" onclick="copyAppsScript()">📋 Скопировать код</button>
+            <button class="copy-btn" style="flex:1;border-color:var(--accent3);color:var(--accent3)" onclick="diagnoseTx()">🔍 Диагностика</button>
+          </div>
         </div>
+        <div id="diagResult" style="display:none;margin-top:12px;padding:12px;background:var(--surface2);border-radius:10px;font-size:12px;font-family:monospace;color:var(--text2);white-space:pre-wrap;word-break:break-all;line-height:1.5"></div>
       </div>
 
       <div class="settings-card">
@@ -1142,7 +1146,7 @@ const INCOME_SOURCES = [
 ];
 
 let data = JSON.parse(localStorage.getItem('expenses_data') || '{"transactions":[]}');
-const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfnAzSSqbClVueUvClg4YVTlbS7238Xtg0jUjsjXHBrE3THfrlCvKJXYnmg4z5HonKgA/exec';
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOcso9ludjbW3v4UDhfyh6rJ-fpS-jQeQf4hrObXxWTJ9-H_w-UVeHBg5w6yaiDP5b_w/exec';
 let settings = JSON.parse(localStorage.getItem('expenses_settings') || '{"initialBalance":0,"monthBudget":0,"scriptUrl":""}');
 if (!settings.scriptUrl || settings.scriptUrl.includes('AKfycbwHTrn')) {
   settings.scriptUrl = DEFAULT_SCRIPT_URL;
@@ -2308,28 +2312,36 @@ function renderAppsScriptCode() {
     }
   }
 
-  if (data.action === 'aiAnalysis') {
-    // Замени YOUR_OPENAI_KEY на свой ключ с platform.openai.com
-    var API_KEY = 'YOUR_OPENAI_KEY';
+  // ← Вставь свой ключ сюда: platform.openai.com → API keys
+  var OPENAI_KEY = 'YOUR_OPENAI_KEY';
+
+  if (data.action === 'aiAnalysis' || data.action === 'aiDiag') {
+    var testPrompt = data.action === 'aiDiag'
+      ? 'Скажи "ОК" одним словом.'
+      : data.prompt;
     var payload = JSON.stringify({
       model: 'gpt-4o-mini',
-      max_tokens: 300,
+      max_tokens: data.action === 'aiDiag' ? 10 : 300,
       messages: [
         { role: 'system', content: 'Ты финансовый помощник. Отвечай кратко, по-русски, без markdown.' },
-        { role: 'user', content: data.prompt }
+        { role: 'user', content: testPrompt }
       ]
     });
     var options = {
       method: 'post',
       contentType: 'application/json',
-      headers: {
-        'Authorization': 'Bearer ' + API_KEY
-      },
+      headers: { 'Authorization': 'Bearer ' + OPENAI_KEY },
       payload: payload,
       muteHttpExceptions: true
     };
     var response = UrlFetchApp.fetch('https://api.openai.com/v1/chat/completions', options);
     var result = JSON.parse(response.getContentText());
+    // Return raw error so diagnostics can show it
+    if (result.error) {
+      return ContentService
+        .createTextOutput(JSON.stringify({status:'error', diagError: JSON.stringify(result.error, null, 2)}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
     var text = result.choices && result.choices[0] ? result.choices[0].message.content : 'Нет ответа';
     return ContentService
       .createTextOutput(JSON.stringify({status:'ok', text: text}))
@@ -2489,11 +2501,67 @@ ${settings.monthBudget ? `- Месячный бюджет: ${formatNum(settings.
     if (json.status === 'ok' && json.text) {
       el.textContent = json.text;
     } else {
-      el.textContent = 'Ошибка: ' + (json.error || 'нет ответа от ИИ. Проверь API ключ в скрипте.');
+      el.textContent = 'Ошибка ИИ: ' + (json.error || json.text || 'пустой ответ') + '\n\nПодробности: ⚙️ → Диагностика';
     }
   } catch(e) {
-    el.textContent = 'Не удалось связаться с Apps Script. Проверь ссылку в настройках ⚙️';
+    el.textContent = 'Не удалось связаться с Apps Script.\nОшибка: ' + e.message + '\n\nПроверь URL в настройках ⚙️';
   }
+}
+
+// ==============================
+// DIAGNOSTICS
+// ==============================
+async function diagnoseTx() {
+  const box = document.getElementById('diagResult');
+  box.style.display = 'block';
+  box.textContent = '⏳ Проверяю подключение...';
+
+  if (!settings.scriptUrl) {
+    box.textContent = '❌ URL Apps Script не указан в настройках';
+    return;
+  }
+
+  const steps = [];
+  steps.push('URL: ' + settings.scriptUrl.slice(0, 60) + '...');
+
+  // Step 1: test basic connectivity (GET)
+  try {
+    const r = await fetch(settings.scriptUrl + '?action=getRows');
+    steps.push('✅ Соединение с Apps Script: OK (статус ' + r.status + ')');
+  } catch(e) {
+    steps.push('❌ Соединение с Apps Script: ОШИБКА — ' + e.message);
+    box.textContent = steps.join('\n');
+    return;
+  }
+
+  // Step 2: test AI with raw error returned
+  steps.push('⏳ Проверяю OpenAI API...');
+  box.textContent = steps.join('\n');
+  try {
+    const res = await fetch(settings.scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'aiDiag' })
+    });
+    const text = await res.text();
+    let parsed;
+    try { parsed = JSON.parse(text); } catch(e) { parsed = null; }
+
+    if (parsed && parsed.status === 'ok') {
+      steps.push('✅ OpenAI API: OK — модель ответила');
+      steps.push('Ответ: ' + (parsed.text || '').slice(0, 100));
+    } else if (parsed && parsed.diagError) {
+      steps.push('❌ OpenAI API ошибка:');
+      steps.push(parsed.diagError);
+    } else {
+      steps.push('⚠️ Неожиданный ответ от скрипта:');
+      steps.push(text.slice(0, 300));
+    }
+  } catch(e) {
+    steps.push('❌ Ошибка запроса: ' + e.message);
+  }
+
+  box.textContent = steps.join('\n');
 }
 
 // ==============================
