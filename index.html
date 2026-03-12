@@ -1146,7 +1146,7 @@ const INCOME_SOURCES = [
 ];
 
 let data = JSON.parse(localStorage.getItem('expenses_data') || '{"transactions":[]}');
-const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbySmMvR6jXDYuG0booEDB9autp5N2Pqns_3FvTQv3Zc6MUIc09e4vO0xuIfAjpVZsrc7Q/exec';
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzp5IIAqeJ-kp_mfIBI6ElQZ7dYC-3eePA3DLIP-g87HJGV9D3_mB5mpqblllgBb_WPYw/exec';
 let settings = JSON.parse(localStorage.getItem('expenses_settings') || '{"initialBalance":0,"monthBudget":0,"scriptUrl":""}');
 if (!settings.scriptUrl || settings.scriptUrl.includes('AKfycbwHTrn') || settings.scriptUrl.includes('AKfycbxOcso')) {
   settings.scriptUrl = DEFAULT_SCRIPT_URL;
@@ -1591,7 +1591,7 @@ function getAvailableMonths() {
 }
 
 function renderMonthSelectors() {
-  const months = getAvailableMonths();
+  const months = getAvailableMonths(); // months that have data
   const now = new Date();
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const prevMonth = (() => {
@@ -1599,33 +1599,48 @@ function renderMonthSelectors() {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
   })();
 
-  // Default selection
-  if (!compareMonthA) compareMonthA = months.includes(thisMonth) ? thisMonth : (months[0] || thisMonth);
-  if (!compareMonthB) compareMonthB = months.includes(prevMonth) ? prevMonth : (months[1] || months[0] || prevMonth);
+  // Build full 12-month list regardless of data
+  const allMonthsSet = new Set(months);
+  const d = new Date();
+  for (let i = 0; i < 12; i++) {
+    allMonthsSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+    d.setMonth(d.getMonth()-1);
+  }
+  const allMonths = [...allMonthsSet].sort().reverse();
+
+  // Smart defaults: A = this month, B = prev month (always different!)
+  if (!compareMonthA) compareMonthA = thisMonth;
+  if (!compareMonthB || compareMonthB === compareMonthA) {
+    // Pick the first month that is NOT compareMonthA
+    compareMonthB = allMonths.find(m => m !== compareMonthA) || prevMonth;
+  }
 
   const MONTH_NAMES = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
 
   function buildRow(containerId, activeKey, setFn, cls) {
     const container = document.getElementById(containerId);
-    // Keep the label element, rebuild pills
     const label = container.firstElementChild;
     container.innerHTML = '';
     container.appendChild(label);
 
-    // Always show last 12 months minimum
-    const allMonths = new Set(months);
-    const d = new Date();
-    for (let i = 0; i < 12; i++) {
-      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-      allMonths.add(key);
-      d.setMonth(d.getMonth()-1);
-    }
-    [...allMonths].sort().reverse().forEach(m => {
+    allMonths.forEach(m => {
       const [y, mo] = m.split('-');
+      const hasData = months.includes(m);
       const btn = document.createElement('button');
       btn.className = 'month-pill' + (m === activeKey ? ' ' + cls : '');
       btn.textContent = MONTH_NAMES[parseInt(mo)-1] + ' ' + y;
-      btn.onclick = () => { setFn(m); renderMonthCompare(); renderMonthSelectors(); };
+      if (!hasData) btn.style.opacity = '0.45';
+      btn.title = hasData ? '' : 'Нет данных';
+      btn.onclick = () => {
+        setFn(m);
+        // Prevent A and B being the same
+        if (compareMonthA === compareMonthB) {
+          if (cls === 'active-a') compareMonthB = allMonths.find(x => x !== compareMonthA) || compareMonthB;
+          else compareMonthA = allMonths.find(x => x !== compareMonthB) || compareMonthA;
+        }
+        renderMonthCompare();
+        renderMonthSelectors();
+      };
       container.appendChild(btn);
     });
   }
@@ -1666,6 +1681,13 @@ function renderMonthCompare() {
   const max = Math.max(...[...allCats].map(c => Math.max(a.byCat[c]||0, b.byCat[c]||0)), 1);
 
   const barsEl = document.getElementById('compareBars');
+
+  if (compareMonthA === compareMonthB) {
+    barsEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--accent2);font-size:13px">⚠️ Выбраны одинаковые месяцы — выбери разные для сравнения</div>';
+    document.getElementById('compareTotals').innerHTML = '';
+    return;
+  }
+
   if (!allCats.size) {
     barsEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2);font-size:13px">Нет данных для сравнения</div>';
     document.getElementById('compareTotals').innerHTML = '';
@@ -1680,18 +1702,32 @@ function renderMonthCompare() {
     const vb = b.byCat[catId] || 0;
     const pa = Math.round((va/max)*100);
     const pb = Math.round((vb/max)*100);
+
+    // Per-category change arrow
+    let badge = '';
+    if (va > 0 && vb > 0) {
+      const chg = Math.round((va - vb) / vb * 100);
+      const sign = chg > 0 ? '+' : '';
+      const clr = chg > 0 ? 'var(--accent2)' : 'var(--accent3)';
+      badge = `<span style="font-size:11px;font-weight:700;color:${clr};margin-left:6px">${sign}${chg}%</span>`;
+    } else if (va > 0 && vb === 0) {
+      badge = `<span style="font-size:11px;font-weight:700;color:var(--accent2);margin-left:6px">новое</span>`;
+    } else if (va === 0 && vb > 0) {
+      badge = `<span style="font-size:11px;font-weight:700;color:var(--accent3);margin-left:6px">−100%</span>`;
+    }
+
     return `<div class="cmp-row">
       <div class="cmp-row-header">
-        <div class="cmp-row-name">${cat.icon} ${cat.label}</div>
+        <div class="cmp-row-name">${cat.icon} ${cat.label}${badge}</div>
         <div class="cmp-row-vals">
-          <span class="cmp-val-a">${formatNum(va)}</span>
-          <span style="color:var(--text2)">vs</span>
-          <span class="cmp-val-b">${formatNum(vb)}</span>
+          <span class="cmp-val-a">${va > 0 ? formatNum(va) : '—'}</span>
+          <span style="color:var(--text2);font-size:11px">vs</span>
+          <span class="cmp-val-b">${vb > 0 ? formatNum(vb) : '—'}</span>
         </div>
       </div>
       <div class="cmp-tracks">
-        <div class="cmp-track"><div class="cmp-fill-a" style="width:${pa}%"></div></div>
-        <div class="cmp-track"><div class="cmp-fill-b" style="width:${pb}%"></div></div>
+        <div class="cmp-track"><div class="cmp-fill-a" style="width:${pa}%;transition:width 0.8s cubic-bezier(0.34,1.56,0.64,1)"></div></div>
+        <div class="cmp-track"><div class="cmp-fill-b" style="width:${pb}%;transition:width 0.8s cubic-bezier(0.34,1.56,0.64,1)"></div></div>
       </div>
     </div>`;
   }).join('');
@@ -1699,18 +1735,20 @@ function renderMonthCompare() {
   // Totals comparison
   const diff = a.total - b.total;
   const diffPct = b.total > 0 ? Math.round(Math.abs(diff)/b.total*100) : 0;
-  const diffText = diff === 0 ? '= одинаково' : diff > 0 ? `▲ +${diffPct}% больше` : `▼ ${diffPct}% меньше`;
+  const diffText = diff === 0 ? '= одинаково' : diff > 0 ? `▲ на ${diffPct}% больше` : `▼ на ${diffPct}% меньше`;
   const diffCls = diff <= 0 ? 'better' : 'worse';
 
   document.getElementById('compareTotals').innerHTML = `
     <div class="ct-item">
       <div class="ct-label" style="color:var(--accent)">${fmtLabel(compareMonthA)}</div>
       <div class="ct-val">${formatNum(a.total)} сом</div>
+      ${a.total === 0 ? '<div style="font-size:11px;color:var(--text2)">нет расходов</div>' : ''}
     </div>
     <div class="ct-item">
       <div class="ct-label" style="color:var(--accent2)">${fmtLabel(compareMonthB)}</div>
       <div class="ct-val">${formatNum(b.total)} сом</div>
-      <div class="ct-diff ${diffCls}">${diffText}</div>
+      ${b.total === 0 ? '<div style="font-size:11px;color:var(--text2)">нет расходов</div>' : ''}
+      ${a.total > 0 && b.total > 0 ? `<div class="ct-diff ${diffCls}">${diffText}</div>` : ''}
     </div>`;
 }
 
@@ -2389,7 +2427,7 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    var geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_KEY;
+    var geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_KEY;
     var payload = JSON.stringify({
       contents: [{
         parts: [{ text: 'Ты финансовый помощник. Отвечай кратко, по-русски, без markdown, без звёздочек. ' + userPrompt }]
