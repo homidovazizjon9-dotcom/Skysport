@@ -1146,7 +1146,7 @@ const INCOME_SOURCES = [
 ];
 
 let data = JSON.parse(localStorage.getItem('expenses_data') || '{"transactions":[]}');
-const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAPfZZ4yfmi5DWcr5WVeOUjUQgVLVeBHPFPPD_K66snunbaFUTHr5-YAI9bw1KEhzD8g/exec';
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxp-l1yidIWnlYMDL-7RmxjSmgrhAPSLY8hM2yegmD10K_gLKTUUPAdMBc_HB5t9uyVnA/exec';
 let settings = JSON.parse(localStorage.getItem('expenses_settings') || '{"initialBalance":0,"monthBudget":0,"scriptUrl":""}');
 if (!settings.scriptUrl || settings.scriptUrl.includes('AKfycbwHTrn') || settings.scriptUrl.includes('AKfycbxOcso')) {
   settings.scriptUrl = DEFAULT_SCRIPT_URL;
@@ -2355,8 +2355,8 @@ function renderAppsScriptCode() {
 
 function doGet(e) {
   var action = e && e.parameter && e.parameter.action;
-  // ← Вставь свой ключ сюда: platform.openai.com → API keys
-  var OPENAI_KEY = 'YOUR_OPENAI_KEY';
+  // ← Вставь свой Gemini API ключ: aistudio.google.com → Get API key
+  var GEMINI_KEY = 'YOUR_GEMINI_KEY';
 
   if (action === 'getRows') {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -2389,33 +2389,32 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    var geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_KEY;
     var payload = JSON.stringify({
-      model: 'gpt-4o-mini',
-      max_tokens: action === 'aiDiag' ? 10 : 350,
-      messages: [
-        { role: 'system', content: 'Ты финансовый помощник. Отвечай кратко, по-русски, без markdown.' },
-        { role: 'user', content: userPrompt }
-      ]
+      contents: [{
+        parts: [{ text: 'Ты финансовый помощник. Отвечай кратко, по-русски, без markdown, без звёздочек. ' + userPrompt }]
+      }],
+      generationConfig: { maxOutputTokens: action === 'aiDiag' ? 10 : 350 }
     });
 
     var options = {
       method: 'post',
       contentType: 'application/json',
-      headers: { 'Authorization': 'Bearer ' + OPENAI_KEY },
       payload: payload,
       muteHttpExceptions: true
     };
 
-    var response = UrlFetchApp.fetch('https://api.openai.com/v1/chat/completions', options);
+    var response = UrlFetchApp.fetch(geminiUrl, options);
     var result = JSON.parse(response.getContentText());
 
     if (result.error) {
       return ContentService
-        .createTextOutput(JSON.stringify({status:'error', diagError: result.error.type + ': ' + result.error.message}))
+        .createTextOutput(JSON.stringify({status:'error', diagError: result.error.status + ': ' + result.error.message}))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    var text = result.choices && result.choices[0] ? result.choices[0].message.content : '';
+    var text = '';
+    try { text = result.candidates[0].content.parts[0].text; } catch(e) {}
     return ContentService
       .createTextOutput(JSON.stringify({status:'ok', text: text}))
       .setMimeType(ContentService.MimeType.JSON);
