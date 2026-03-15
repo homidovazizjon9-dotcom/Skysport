@@ -2805,11 +2805,17 @@ function userPath(sub) {
   return `users/${currentUser.uid}/${sub}`;
 }
 
+// Remove undefined values — Firebase doesn't accept them
+function cleanForFirebase(obj) {
+  return JSON.parse(JSON.stringify(obj, (key, val) => val === undefined ? null : val));
+}
+
 async function saveData() {
   lsSet('expenses_data', data);
   if (currentUser && window._fbSet) {
     try {
-      await window._fbSet(window._fbRef(window._fbDb, userPath('transactions')), data.transactions || []);
+      const clean = cleanForFirebase(data.transactions || []);
+      await window._fbSet(window._fbRef(window._fbDb, userPath('transactions')), clean);
     } catch(e) { console.warn('RTDB save error:', e); }
   }
 }
