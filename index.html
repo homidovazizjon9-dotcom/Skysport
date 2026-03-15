@@ -1558,9 +1558,9 @@ document.addEventListener('click', e => {
 
 // Called when Firebase auth state changes
 window._onAuthReady = async (user) => {
-  // Always hide splash first
+  // Always hide splash first — regardless of auth result
   const splash = document.getElementById('splashScreen');
-  if (splash) splash.style.display = 'none';
+  if (splash) { splash.style.display = 'none'; }
 
   if (user) {
     currentUser = user;
@@ -1621,17 +1621,26 @@ function initApp() {
 }
 
 function init() {
-  // Splash is shown by default in HTML
-  // Firebase module will call _onAuthReady which hides splash
-  // If Firebase takes too long — show login after 6s
-  setTimeout(() => {
+  // Check every 500ms if Firebase auth resolved
+  // If not resolved in 5s — show login screen
+  let waited = 0;
+  const check = setInterval(() => {
+    waited += 500;
     const splash = document.getElementById('splashScreen');
-    if (splash && splash.style.display !== 'none' && !currentUser) {
+    const stillShowing = splash && splash.style.display !== 'none';
+
+    // If _onAuthReady already handled it — stop checking
+    if (!stillShowing) { clearInterval(check); return; }
+
+    // After 5s with no response — show login
+    if (waited >= 5000 && !currentUser) {
+      clearInterval(check);
       splash.style.display = 'none';
       document.getElementById('loginScreen').style.display = 'flex';
       spawnCoins();
+      console.warn('Firebase auth timeout — showing login');
     }
-  }, 6000);
+  }, 500);
 }
 
 function setHeaderDate() {
