@@ -934,7 +934,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getDatabase, ref, set, get, child }
+  import { getDatabase, ref, set, get, child, onValue, off }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
   const firebaseConfig = {
@@ -961,6 +961,8 @@
   window._fbSet = set;
   window._fbGet = get;
   window._fbChild = child;
+  window._fbOnValue = onValue;
+  window._fbOff = off;
   window._firebaseReady = true;
 
   onAuthStateChanged(auth, (user) => {
@@ -1292,27 +1294,18 @@
       </div>
 
       <div class="settings-card">
-        <h3>☁️ Google Sheets</h3>
-        <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:8px">
-          <label>URL вашего Apps Script</label>
-          <input class="field-input" type="text" id="scriptUrl" placeholder="https://script.google.com/..." oninput="saveSettings()" style="max-width:100%;width:100%;font-size:13px">
-        </div>
-        <div style="margin-top:12px">
-          <div style="font-size:13px;color:var(--text2);margin-bottom:8px">📋 Apps Script код (вставьте в Google Таблицу):</div>
-          <div class="code-block" id="appsScriptCode"></div>
-          <div style="display:flex;gap:8px;margin-top:10px">
-            <button class="copy-btn" style="flex:1" onclick="copyAppsScript()">📋 Скопировать код</button>
-            <button class="copy-btn" style="flex:1;border-color:var(--accent3);color:var(--accent3)" onclick="diagnoseTx()">🔍 Диагностика</button>
-          </div>
-        </div>
-        <div id="diagResult" style="display:none;margin-top:12px;padding:12px;background:var(--surface2);border-radius:10px;font-size:12px;font-family:monospace;color:var(--text2);white-space:pre-wrap;word-break:break-all;line-height:1.5"></div>
-      </div>
-
-      <div class="settings-card">
-        <h3>📱 Данные</h3>
+        <h3>📊 Данные</h3>
         <div class="settings-row">
-          <label>Экспорт данных (JSON)</label>
-          <button class="copy-btn" style="width:auto;padding:8px 16px" onclick="exportData()">Скачать</button>
+          <label>Экспорт в Excel (.xlsx)</label>
+          <button class="copy-btn" style="width:auto;padding:8px 16px;color:var(--accent3);border-color:var(--accent3)" onclick="exportExcel()">📥 Excel</button>
+        </div>
+        <div class="settings-row">
+          <label>Экспорт в CSV</label>
+          <button class="copy-btn" style="width:auto;padding:8px 16px" onclick="exportCSV()">📥 CSV</button>
+        </div>
+        <div class="settings-row">
+          <label>Экспорт в JSON</label>
+          <button class="copy-btn" style="width:auto;padding:8px 16px" onclick="exportData()">📥 JSON</button>
         </div>
         <div class="settings-row">
           <label>Очистить все данные</label>
@@ -1494,6 +1487,11 @@ async function handleSignIn() {
 
 async function handleSignOut() {
   toggleUserMenu();
+  // Remove real-time listener
+  if (_rtdbListener && window._fbOff) {
+    window._fbOff(window._fbRef(window._fbDb, userPath('transactions')));
+    _rtdbListener = null;
+  }
   await window._fbSignOut();
   currentUser = null;
   data = { transactions: [] };
@@ -2920,10 +2918,13 @@ async function saveData() {
   }
 }
 
-async function loadFromDB() {
-  if (!currentUser) return;
+// Real-time listener reference for cleanup
+let _rtdbListener = null;
 
-  // First load from localStorage cache for instant display
+async function loadFromDB() {
+  if (!currentUser || !window._fbGet) return;
+
+  // Load from localStorage cache first for instant display
   const cachedData = lsGet('expenses_data', '{"transactions":[]}');
   if (cachedData && cachedData.transactions) data = cachedData;
   goalsData = lsGet('goals_data', '[]') || [];
@@ -2932,36 +2933,58 @@ async function loadFromDB() {
     settings = { ...settings, ...cachedSettings };
   }
 
-  // Then load fresh from Firebase (overrides cache)
-  if (!window._fbGet) return;
+  // Load settings and goals once
   try {
     const dbRef = window._fbRef(window._fbDb);
-
-    const txSnap = await window._fbGet(window._fbChild(dbRef, userPath('transactions')));
-    if (txSnap.exists() && txSnap.val()) {
-      const val = txSnap.val();
-      data.transactions = Array.isArray(val) ? val : Object.values(val);
-      lsSet('expenses_data', data);
+    const settSnap = await window._fbGet(window._fbChild(dbRef, userPath('settings')));
+    if (settSnap.exists() && settSnap.val()) {
+      settings = { ...settings, ...settSnap.val() };
+      lsSet('expenses_settings', settings);
     }
-
     const goalsSnap = await window._fbGet(window._fbChild(dbRef, userPath('goals')));
     if (goalsSnap.exists() && goalsSnap.val()) {
       const val = goalsSnap.val();
       goalsData = Array.isArray(val) ? val : Object.values(val);
       lsSet('goals_data', goalsData);
     }
+  } catch(e) { console.warn('RTDB settings/goals load error:', e); }
 
-    const settSnap = await window._fbGet(window._fbChild(dbRef, userPath('settings')));
-    if (settSnap.exists() && settSnap.val()) {
-      settings = { ...settings, ...settSnap.val() };
-      lsSet('expenses_settings', settings);
-    }
+  // Set up REAL-TIME listener for transactions
+  // This fires immediately with current data, then on every change
+  return new Promise((resolve) => {
+    const txRef = window._fbRef(window._fbDb, userPath('transactions'));
 
-    console.log('✅ Firebase loaded:', data.transactions.length, 'transactions');
-  } catch(e) {
-    console.warn('RTDB load error:', e);
-    showToast('Офлайн — данные из кэша', 'error');
-  }
+    // Remove old listener if exists
+    if (_rtdbListener) { window._fbOff(_rtdbListener); }
+
+    let firstLoad = true;
+    _rtdbListener = window._fbOnValue(txRef, (snap) => {
+      if (snap.exists() && snap.val() !== null) {
+        const val = snap.val();
+        data.transactions = Array.isArray(val) ? val.filter(Boolean) : Object.values(val).filter(Boolean);
+        lsSet('expenses_data', data);
+      } else {
+        data.transactions = [];
+      }
+
+      // Always refresh UI when data changes
+      refreshAll();
+      renderHistory();
+
+      if (firstLoad) {
+        firstLoad = false;
+        console.log('✅ Firebase synced:', data.transactions.length, 'transactions');
+        resolve();
+      } else {
+        // Real-time update from another device
+        showToast('🔄 Данные обновлены', 'success');
+      }
+    }, (e) => {
+      console.warn('RTDB listener error:', e);
+      showToast('Офлайн — данные из кэша', 'error');
+      resolve();
+    });
+  });
 }
 
 async function saveGoalsToFirestore() {
@@ -2992,6 +3015,123 @@ function exportData() {
   a.href = URL.createObjectURL(blob);
   a.download = 'expenses_' + new Date().toISOString().split('T')[0] + '.json';
   a.click();
+}
+
+function exportCSV() {
+  const cur = CUR();
+  const rows = [['Дата','Название','Сумма','Валюта','Тип','Категория','Заметка']];
+  const sorted = [...data.transactions].sort((a,b) => a.date > b.date ? -1 : 1);
+  sorted.forEach(t => {
+    const cat = CATS.find(c => c.id === t.category);
+    rows.push([
+      t.date,
+      `"${(t.name||'').replace(/"/g,'""')}"`,
+      t.amount,
+      cur,
+      t.type === 'income' ? 'Доход' : 'Расход',
+      cat ? cat.label : t.category,
+      `"${(t.note||'').replace(/"/g,'""')}"`
+    ]);
+  });
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'expenses_' + new Date().toISOString().split('T')[0] + '.csv';
+  a.click();
+  showToast('CSV скачан ✓', 'success');
+}
+
+function exportExcel() {
+  const cur = CUR();
+  const sorted = [...data.transactions].sort((a,b) => a.date > b.date ? -1 : 1);
+
+  // Group by month for summary sheet
+  const byMonth = {};
+  sorted.forEach(t => {
+    const m = t.date.slice(0,7);
+    if (!byMonth[m]) byMonth[m] = { income:0, expense:0 };
+    if (t.type === 'income') byMonth[m].income += t.amount;
+    else byMonth[m].expense += t.amount;
+  });
+
+  const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // Build transactions sheet rows
+  const txRows = sorted.map(t => {
+    const cat = CATS.find(c => c.id === t.category);
+    const [y,m,d] = t.date.split('-');
+    return `<Row>
+      <Cell><Data ss:Type="String">${esc(t.date)}</Data></Cell>
+      <Cell><Data ss:Type="String">${esc(t.name)}</Data></Cell>
+      <Cell ss:StyleID="money"><Data ss:Type="Number">${t.amount}</Data></Cell>
+      <Cell><Data ss:Type="String">${cur}</Data></Cell>
+      <Cell><Data ss:Type="String">${t.type === 'income' ? 'Доход' : 'Расход'}</Data></Cell>
+      <Cell><Data ss:Type="String">${cat ? esc(cat.label) : esc(t.category)}</Data></Cell>
+      <Cell><Data ss:Type="String">${esc(t.note)}</Data></Cell>
+    </Row>`;
+  }).join('');
+
+  // Build summary sheet rows
+  const summaryRows = Object.entries(byMonth).sort((a,b) => b[0]>a[0]?1:-1).map(([m, v]) => {
+    const [y, mo] = m.split('-');
+    const label = MONTH_NAMES[parseInt(mo)-1] + ' ' + y;
+    return `<Row>
+      <Cell><Data ss:Type="String">${esc(label)}</Data></Cell>
+      <Cell ss:StyleID="money"><Data ss:Type="Number">${v.income}</Data></Cell>
+      <Cell ss:StyleID="money"><Data ss:Type="Number">${v.expense}</Data></Cell>
+      <Cell ss:StyleID="money"><Data ss:Type="Number">${v.income - v.expense}</Data></Cell>
+    </Row>`;
+  }).join('');
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Styles>
+    <Style ss:ID="header">
+      <Font ss:Bold="1" ss:Color="#FFFFFF"/>
+      <Interior ss:Color="#7C6DFA" ss:Pattern="Solid"/>
+    </Style>
+    <Style ss:ID="money">
+      <NumberFormat ss:Format="#,##0.00"/>
+    </Style>
+  </Styles>
+  <Worksheet ss:Name="Транзакции">
+    <Table>
+      <Row ss:StyleID="header">
+        <Cell><Data ss:Type="String">Дата</Data></Cell>
+        <Cell><Data ss:Type="String">Название</Data></Cell>
+        <Cell><Data ss:Type="String">Сумма</Data></Cell>
+        <Cell><Data ss:Type="String">Валюта</Data></Cell>
+        <Cell><Data ss:Type="String">Тип</Data></Cell>
+        <Cell><Data ss:Type="String">Категория</Data></Cell>
+        <Cell><Data ss:Type="String">Заметка</Data></Cell>
+      </Row>
+      ${txRows}
+    </Table>
+  </Worksheet>
+  <Worksheet ss:Name="Сводка по месяцам">
+    <Table>
+      <Row ss:StyleID="header">
+        <Cell><Data ss:Type="String">Месяц</Data></Cell>
+        <Cell><Data ss:Type="String">Доходы (${cur})</Data></Cell>
+        <Cell><Data ss:Type="String">Расходы (${cur})</Data></Cell>
+        <Cell><Data ss:Type="String">Баланс (${cur})</Data></Cell>
+      </Row>
+      ${summaryRows}
+    </Table>
+  </Worksheet>
+</Workbook>`;
+
+  const blob = new Blob([xml], { type:'application/vnd.ms-excel;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'expenses_' + new Date().toISOString().split('T')[0] + '.xls';
+  a.click();
+  showToast('Excel скачан ✓', 'success');
 }
 
 async function clearData() {
