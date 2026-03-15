@@ -944,7 +944,7 @@
     storageBucket: "spenses-f8c91.firebasestorage.app",
     messagingSenderId: "609345629874",
     appId: "1:609345629874:web:37a5acb549a651d4b923ab",
-    databaseURL: "https://spenses-f8c91-default-rtdb.firebaseio.com"
+    databaseURL: "https://spenses-f8c91-default-rtdb.europe-west1.firebasedatabase.app"
   };
 
   const app = initializeApp(firebaseConfig);
@@ -1448,12 +1448,21 @@ const INCOME_SOURCES = [
   { id:'other_in', label:'Другое',     icon:'💵' },
 ];
 
-let data = JSON.parse(localStorage.getItem('expenses_data') || '{"transactions":[]}');
+// Data loaded fresh per user after login — start empty
+let data = { transactions: [] };
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxSsLxk9ZWDPal4oviUZVuOtogwcO1u-0gh-4RafXJQUbesrIoBSiTRZo19h16RCMQICQ/exec';
-let settings = JSON.parse(localStorage.getItem('expenses_settings') || '{"initialBalance":0,"monthBudget":0,"scriptUrl":""}');
-if (!settings.scriptUrl || settings.scriptUrl.includes('AKfycbwHTrn') || settings.scriptUrl.includes('AKfycbxOcso')) {
-  settings.scriptUrl = DEFAULT_SCRIPT_URL;
-  localStorage.setItem('expenses_settings', JSON.stringify(settings));
+let settings = { initialBalance:0, monthBudget:0, scriptUrl: DEFAULT_SCRIPT_URL };
+
+// User-scoped localStorage helpers
+function lsKey(key) {
+  const uid = currentUser ? currentUser.uid : 'guest';
+  return `${uid}_${key}`;
+}
+function lsGet(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(lsKey(key)) || fallback); } catch(e) { return JSON.parse(fallback); }
+}
+function lsSet(key, val) {
+  localStorage.setItem(lsKey(key), JSON.stringify(val));
 }
 let currentType = 'expense';
 let currentCat = 'food';
@@ -1520,11 +1529,12 @@ window._onAuthReady = async (user) => {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
 
-    showToast('Загружаем ваши данные...', 'success');
     await loadFromDB();
 
-    // Init app
+    // Init app with fresh data
     initApp();
+    refreshAll();
+    showToast(`Добро пожаловать, ${user.displayName ? user.displayName.split(' ')[0] : ''}! 👋`, 'success');
   } else {
     // Not logged in — show login screen
     document.getElementById('loginScreen').style.display = 'flex';
@@ -2321,7 +2331,7 @@ async function deleteRowInSheets(tx) {
 // GOALS
 // ==============================
 const GOAL_EMOJIS = ['🎯','📱','✈️','🚗','🏠','💻','👟','🎮','📚','💍','🌴','🏋️','🎸','📷','💰'];
-let goalsData = JSON.parse(localStorage.getItem('goals_data') || '[]');
+let goalsData = [];
 let selectedGoalEmoji = '🎯';
 
 function saveGoalsData() { saveGoalsToFirestore(); }
@@ -2555,7 +2565,7 @@ async function syncToSheets() {
     if (res.ok || res.status === 200) {
       data.transactions = data.transactions.map(t => ({ ...t, synced: true }));
       saveData();
-      localStorage.removeItem('pending_sync');
+      localStorage.removeItem(lsKey('pending_sync'));
       document.getElementById('syncBadge').classList.remove('show');
       showToast(`Синхронизировано ${unsynced.length} записей ✓`, 'success');
     } else {
@@ -2593,7 +2603,7 @@ async function syncSingleTx(tx) {
 }
 
 function markPendingSync() {
-  localStorage.setItem('pending_sync', '1');
+  lsSet('pending_sync', '1');
   document.getElementById('syncBadge').classList.add('show');
 }
 
@@ -2898,7 +2908,7 @@ function userPath(sub) {
 }
 
 async function saveData() {
-  localStorage.setItem('expenses_data', JSON.stringify(data));
+  lsSet('expenses_data', data);
   if (currentUser && window._fbSet) {
     try {
       await window._fbSet(window._fbRef(window._fbDb, userPath('transactions')), data.transactions || []);
@@ -2907,33 +2917,51 @@ async function saveData() {
 }
 
 async function loadFromDB() {
-  if (!currentUser || !window._fbGet) return;
+  if (!currentUser) return;
+
+  // First load from localStorage cache for instant display
+  const cachedData = lsGet('expenses_data', '{"transactions":[]}');
+  if (cachedData && cachedData.transactions) data = cachedData;
+  goalsData = lsGet('goals_data', '[]') || [];
+  const cachedSettings = lsGet('expenses_settings', '{}');
+  if (cachedSettings && Object.keys(cachedSettings).length) {
+    settings = { ...settings, ...cachedSettings };
+  }
+
+  // Then load fresh from Firebase (overrides cache)
+  if (!window._fbGet) return;
   try {
     const dbRef = window._fbRef(window._fbDb);
-    // Load transactions
+
     const txSnap = await window._fbGet(window._fbChild(dbRef, userPath('transactions')));
-    if (txSnap.exists()) {
-      data.transactions = txSnap.val() || [];
-      localStorage.setItem('expenses_data', JSON.stringify(data));
+    if (txSnap.exists() && txSnap.val()) {
+      const val = txSnap.val();
+      data.transactions = Array.isArray(val) ? val : Object.values(val);
+      lsSet('expenses_data', data);
     }
-    // Load goals
+
     const goalsSnap = await window._fbGet(window._fbChild(dbRef, userPath('goals')));
-    if (goalsSnap.exists()) {
-      goalsData = goalsSnap.val() || [];
-      localStorage.setItem('goals_data', JSON.stringify(goalsData));
+    if (goalsSnap.exists() && goalsSnap.val()) {
+      const val = goalsSnap.val();
+      goalsData = Array.isArray(val) ? val : Object.values(val);
+      lsSet('goals_data', goalsData);
     }
-    // Load settings
+
     const settSnap = await window._fbGet(window._fbChild(dbRef, userPath('settings')));
-    if (settSnap.exists()) {
-      const s = settSnap.val();
-      settings = { ...settings, ...s };
-      localStorage.setItem('expenses_settings', JSON.stringify(settings));
+    if (settSnap.exists() && settSnap.val()) {
+      settings = { ...settings, ...settSnap.val() };
+      lsSet('expenses_settings', settings);
     }
-  } catch(e) { console.warn('RTDB load error:', e); }
+
+    console.log('✅ Firebase loaded:', data.transactions.length, 'transactions');
+  } catch(e) {
+    console.warn('RTDB load error:', e);
+    showToast('Офлайн — данные из кэша', 'error');
+  }
 }
 
 async function saveGoalsToFirestore() {
-  localStorage.setItem('goals_data', JSON.stringify(goalsData));
+  lsSet('goals_data', goalsData);
   if (currentUser && window._fbSet) {
     try {
       await window._fbSet(window._fbRef(window._fbDb, userPath('goals')), goalsData || []);
@@ -2942,7 +2970,7 @@ async function saveGoalsToFirestore() {
 }
 
 async function saveSettingsToFirestore() {
-  localStorage.setItem('expenses_settings', JSON.stringify(settings));
+  lsSet('expenses_settings', settings);
   if (currentUser && window._fbSet) {
     try {
       await window._fbSet(window._fbRef(window._fbDb, userPath('settings')), settings);
