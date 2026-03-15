@@ -1804,8 +1804,6 @@ async function addTransaction() {
   saveData();
   refreshAll();
 
-  if (settings.scriptUrl) await syncSingleTx(tx);
-  else markPendingSync();
 
   // Reset form
   document.getElementById('amountInput').value = '';
@@ -2380,27 +2378,11 @@ async function deleteTxConfirmed(id) {
   data.transactions = data.transactions.filter(t => t.id !== id);
   saveData(); refreshAll(); renderHistory();
   showToast('Удалено', 'error');
-  if (tx && settings.scriptUrl) await deleteRowInSheets(tx);
 }
 
 // alias — modal's delete button calls this
 function deleteTx(id) { confirmDeleteTx(id); }
 
-async function deleteRowInSheets(tx) {
-  if (!settings.scriptUrl || !tx) return;
-  try {
-    await fetch(settings.scriptUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({
-        action: 'deleteRow',
-        date: tx.date,
-        name: tx.name,
-        amount: Math.abs(tx.amount)
-      })
-    });
-  } catch(e) { console.warn('Sheets delete failed', e); }
-}
 
 // ==============================
 // GOALS
@@ -2600,196 +2582,6 @@ function deleteFromModal() {
   setTimeout(() => confirmDeleteTx(id), 150);
 }
 
-// keep for backward compat — swipe delete calls deleteTx directly
-
-// ==============================
-// SYNC TO GOOGLE SHEETS
-// ==============================
-async function syncToSheets() {
-  if (!settings.scriptUrl) {
-    showToast('Укажите URL скрипта в настройках', 'error');
-    showTab('settings', document.querySelectorAll('.tab')[4]);
-    return;
-  }
-
-  const btn = document.getElementById('syncIcon');
-  document.querySelector('.sync-btn').classList.add('syncing');
-
-  try {
-    const unsynced = data.transactions.filter(t => !t.synced);
-    if (!unsynced.length) {
-      showToast('Всё уже синхронизировано ✓', 'success');
-      document.querySelector('.sync-btn').classList.remove('syncing');
-      return;
-    }
-
-    const rows = unsynced.map(tx => ({
-      date: tx.date,
-      name: tx.name,
-      amount: tx.type === 'income' ? tx.amount : -tx.amount,
-      category: CATS.find(c => c.id === tx.category)?.label || tx.category,
-      note: tx.note || ''
-    }));
-
-    const res = await fetch(settings.scriptUrl, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'addRows', rows }),
-      headers: { 'Content-Type': 'text/plain' }
-    });
-
-    if (res.ok || res.status === 200) {
-      data.transactions = data.transactions.map(t => ({ ...t, synced: true }));
-      saveData();
-      localStorage.removeItem(lsKey('pending_sync'));
-      document.getElementById('syncBadge').classList.remove('show');
-      showToast(`Синхронизировано ${unsynced.length} записей ✓`, 'success');
-    } else {
-      throw new Error('Server error');
-    }
-  } catch (e) {
-    showToast('Ошибка синхронизации ❌', 'error');
-    markPendingSync();
-  }
-
-  document.querySelector('.sync-btn').classList.remove('syncing');
-}
-
-async function syncSingleTx(tx) {
-  if (!settings.scriptUrl) return;
-  try {
-    const row = {
-      date: tx.date,
-      name: tx.name,
-      amount: tx.type === 'income' ? tx.amount : -tx.amount,
-      category: CATS.find(c => c.id === tx.category)?.label || tx.category,
-      note: tx.note || ''
-    };
-    const res = await fetch(settings.scriptUrl, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'addRows', rows: [row] }),
-      headers: { 'Content-Type': 'text/plain' }
-    });
-    if (res.ok || res.status === 200) {
-      const idx = data.transactions.findIndex(t => t.id === tx.id);
-      if (idx !== -1) data.transactions[idx].synced = true;
-      saveData();
-    } else { markPendingSync(); }
-  } catch (e) { markPendingSync(); }
-}
-
-function markPendingSync() {
-  lsSet('pending_sync', '1');
-  document.getElementById('syncBadge').classList.add('show');
-}
-
-// ==============================
-// IMPORT FROM GOOGLE SHEETS
-// ==============================
-const CAT_MAP = {
-  'еда': 'food', 'food': 'food',
-  'машина': 'car', 'car': 'car', 'авто': 'car',
-  'развлечения': 'fun', 'fun': 'fun',
-  'здоровье': 'health', 'health': 'health',
-  'подарок': 'gift', 'gift': 'gift',
-  'кредит': 'credit', 'credit': 'credit',
-  'дом': 'home', 'home': 'home',
-  'одежда': 'cloth', 'cloth': 'cloth',
-  'доход': 'income', 'income': 'income',
-};
-
-function mapCategory(str) {
-  if (!str) return 'other';
-  const key = str.trim().toLowerCase();
-  return CAT_MAP[key] || 'other';
-}
-
-async function importFromSheets(silent = false) {
-  if (!settings.scriptUrl) {
-    if (!silent) showToast('Укажите URL скрипта в настройках', 'error');
-    return;
-  }
-
-  const btn = document.getElementById('importBtn');
-  const icon = document.getElementById('importIcon');
-  btn.classList.add('syncing');
-  icon.textContent = '⏳';
-  if (!silent) showToast('Загружаю данные...', 'success');
-
-  try {
-    const url = settings.scriptUrl + '?action=getRows';
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-
-    const json = await res.json();
-    if (!json.rows || !Array.isArray(json.rows)) throw new Error('Нет данных');
-
-    const rows = json.rows;
-    if (rows.length === 0) {
-      showToast('Таблица пуста', 'error');
-      btn.classList.remove('syncing');
-      icon.textContent = '📥';
-      return;
-    }
-
-    // Convert rows to transactions, skip duplicates by date+name+amount
-    const existing = new Set(
-      data.transactions.map(t => `${t.date}|${t.name}|${t.amount}`)
-    );
-
-    let added = 0;
-    const newTxs = [];
-
-    rows.forEach((row, i) => {
-      // Expected columns: [date, name, amount, category, type, note]
-      const date   = String(row[0] || '').trim();
-      const name   = String(row[1] || '').trim();
-      const amount = Math.abs(parseFloat(row[2]) || 0);
-      const catRaw = String(row[3] || '').trim();
-      const typeRaw = String(row[4] || 'Расход').trim().toLowerCase();
-      const note   = String(row[5] || '').trim();
-
-      if (!date || !name || !amount) return; // skip empty rows
-
-      const type = (typeRaw === 'доход' || typeRaw === 'income') ? 'income' : 'expense';
-      const category = type === 'income' ? 'income' : mapCategory(catRaw);
-
-      const key = `${date}|${name}|${amount}`;
-      if (existing.has(key)) return; // skip duplicate
-
-      newTxs.push({
-        id: 'sheets_' + Date.now() + '_' + i,
-        date, name, amount, category, type, note,
-        synced: true
-      });
-      existing.add(key);
-      added++;
-    });
-
-    if (added > 0) {
-      // Merge: sheets data first (older), then local
-      data.transactions = [...newTxs, ...data.transactions]
-        .sort((a, b) => new Date(b.date) - new Date(a.date));
-      saveData();
-      refreshAll();
-      showToast(`Загружено ${added} записей из таблицы ✓`, 'success');
-    } else {
-      if (!silent) showToast('Новых данных нет — всё актуально ✓', 'success');
-    }
-
-  } catch (e) {
-    console.error(e);
-    if (!silent) showToast('Ошибка загрузки: обновите Apps Script ❌', 'error');
-  }
-
-  btn.classList.remove('syncing');
-  icon.textContent = '📥';
-}
-
-// ==============================
-// APPS SCRIPT CODE
-// ==============================
-function renderAppsScriptCode() { /* removed - no longer needed */ }
-function copyAppsScript() { /* removed - no longer needed */ }
 
 
 // ==============================
@@ -3050,7 +2842,11 @@ async function handleImportFile(e, typeHint) {
     }
 
     if (!imported.length) {
-      showToast('Нет данных для импорта', 'error');
+      const msg = typeHint === 'csv'
+        ? `CSV не распознан. Строк: ${text.split('\n').length}. Первая строка: "${text.split('\n')[0].slice(0,80)}"`
+        : 'JSON: нет массива транзакций';
+      showToast(msg, 'error');
+      console.error('Import debug — raw text start:', text.slice(0, 300));
       return;
     }
 
@@ -3214,129 +3010,6 @@ async function clearData() {
     refreshAll();
     showToast('Данные очищены', 'error');
   }
-}
-
-// ==============================
-// AI INSIGHTS
-// ==============================
-async function loadAiInsights() {
-  const el = document.getElementById('aiText');
-  if (!el) return;
-  el.innerHTML = '<div class="ai-loading"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>';
-
-  if (data.transactions.length < 3) {
-    el.textContent = 'Добавьте больше записей, чтобы получить анализ 📊';
-    return;
-  }
-
-  // Build summary for Claude
-  const now = new Date();
-  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const prevMonth = (() => {
-    const d = new Date(now.getFullYear(), now.getMonth()-1, 1);
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-  })();
-
-  const txThis = data.transactions.filter(t => t.date.startsWith(thisMonth) && t.type === 'expense');
-  const txPrev = data.transactions.filter(t => t.date.startsWith(prevMonth) && t.type === 'expense');
-
-  const sumThis = txThis.reduce((s,t) => s+t.amount, 0);
-  const sumPrev = txPrev.reduce((s,t) => s+t.amount, 0);
-
-  const byCat = {};
-  txThis.forEach(t => { byCat[t.category] = (byCat[t.category]||0) + t.amount; });
-  const topCats = Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,3)
-    .map(([id,v]) => `${CATS.find(c=>c.id===id)?.label||id}: ${formatNum(v)} сом`).join(', ');
-
-  const today = now.toISOString().split('T')[0];
-  const todaySum = data.transactions.filter(t=>t.date===today&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
-
-  const prompt = `Ты финансовый помощник. Дай краткий анализ (2-3 предложения, без markdown, на русском) расходов пользователя:
-- Этот месяц: ${formatNum(sumThis)} сом
-- Прошлый месяц: ${formatNum(sumPrev)} сом  
-- Топ категории этого месяца: ${topCats || 'нет данных'}
-- Сегодня потрачено: ${formatNum(todaySum)} сом
-- Всего записей: ${data.transactions.length}
-${settings.monthBudget ? `- Месячный бюджет: ${formatNum(settings.monthBudget)} сом` : ''}
-Дай конкретный совет по экономии или наблюдение. Будь дружелюбным и кратким.`;
-
-  if (!settings.scriptUrl) {
-    el.textContent = 'Укажите ссылку на Apps Script в настройках ⚙️';
-    return;
-  }
-
-  try {
-    const aiUrl = settings.scriptUrl + '?action=aiAnalysis&prompt=' + encodeURIComponent(prompt);
-    const res = await fetch(aiUrl);
-    const json = await res.json();
-    if (json.status === 'ok' && json.text) {
-      el.textContent = json.text;
-    } else {
-      el.textContent = 'Ошибка ИИ: ' + (json.error || json.text || 'пустой ответ') + '\n\nПодробности: ⚙️ → Диагностика';
-    }
-  } catch(e) {
-    el.textContent = 'Не удалось связаться с Apps Script.\nОшибка: ' + e.message + '\n\nПроверь URL в настройках ⚙️';
-  }
-}
-
-// ==============================
-// DIAGNOSTICS
-// ==============================
-async function diagnoseTx() {
-  const box = document.getElementById('diagResult');
-  box.style.display = 'block';
-  box.textContent = '⏳ Проверяю подключение...';
-
-  if (!settings.scriptUrl) {
-    box.textContent = '❌ URL Apps Script не указан в настройках';
-    return;
-  }
-
-  const steps = [];
-  steps.push('URL: ' + settings.scriptUrl.slice(0, 60) + '...');
-
-  // Step 1: test basic connectivity (GET)
-  try {
-    const r = await fetch(settings.scriptUrl + '?action=getRows');
-    steps.push('✅ Соединение с Apps Script: OK (статус ' + r.status + ')');
-  } catch(e) {
-    steps.push('❌ Соединение с Apps Script: ОШИБКА — ' + e.message);
-    box.textContent = steps.join('\n');
-    return;
-  }
-
-  // Step 2: test AI with raw error returned
-  steps.push('\n⏳ Проверяю OpenAI API...');
-  box.textContent = steps.join('\n');
-  try {
-    const diagUrl = settings.scriptUrl + '?action=aiDiag';
-    const res = await fetch(diagUrl);
-    const rawText = await res.text();
-    steps.push('📄 Сырой ответ: ' + rawText.slice(0, 500));
-    let parsed;
-    try { parsed = JSON.parse(rawText); } catch(e) { parsed = null; }
-
-    if (!parsed) {
-      steps.push('❌ Не удалось разобрать JSON — скрипт вернул не JSON');
-      steps.push('👉 Убедись что ты ПЕРЕРАЗВЕРНУЛ скрипт после обновления кода!');
-    } else if (parsed.status === 'ok' && parsed.text) {
-      steps.push('✅ OpenAI API: ОК — "' + parsed.text + '"');
-      steps.push('\n🎉 Всё работает! Нажми "Обновить" на главной.');
-    } else if (parsed.diagError) {
-      steps.push('\n❌ Ошибка OpenAI:');
-      steps.push(parsed.diagError);
-    } else if (parsed.status === 'ok' && !parsed.text) {
-      steps.push('\n⚠️ Скрипт вернул {status:ok} но без text');
-      steps.push('👉 Скорее всего в скрипте старый код без блока aiAnalysis/aiDiag');
-      steps.push('Решение: скопируй код заново из ⚙️ и ПЕРЕРАЗВЕРНИ скрипт (новая версия!)');
-    } else {
-      steps.push('⚠️ Неожиданный ответ: ' + JSON.stringify(parsed).slice(0, 200));
-    }
-  } catch(e) {
-    steps.push('❌ Ошибка запроса: ' + e.message);
-  }
-
-  box.textContent = steps.join('\n');
 }
 
 
