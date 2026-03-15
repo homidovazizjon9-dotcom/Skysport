@@ -395,6 +395,32 @@
   .ms-delete { padding:8px 14px; border-radius:8px; background:var(--accent2); border:none; color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
 
 
+
+  /* ====== SPLASH / AUTH CHECK ====== */
+  .splash-screen {
+    position:fixed; inset:0; z-index:3000;
+    background:var(--bg);
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:20px;
+  }
+  .splash-logo {
+    width:72px; height:72px; border-radius:22px;
+    background:linear-gradient(135deg,#7c6dfa,#fa6d8f);
+    display:flex; align-items:center; justify-content:center;
+    font-size:38px;
+    box-shadow:0 8px 32px rgba(124,109,250,0.4);
+    animation: logoBob 2s ease-in-out infinite;
+  }
+  .splash-dots { display:flex; gap:8px; }
+  .splash-dot {
+    width:8px; height:8px; border-radius:50%;
+    background:var(--accent); opacity:0.3;
+    animation: splashPulse 1.2s ease-in-out infinite;
+  }
+  .splash-dot:nth-child(2) { animation-delay:0.2s; }
+  .splash-dot:nth-child(3) { animation-delay:0.4s; }
+  @keyframes splashPulse { 0%,100%{opacity:0.2;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
+
   /* ====== LOGIN SCREEN ====== */
   .login-screen {
     position:fixed; inset:0; z-index:1000;
@@ -974,7 +1000,17 @@
 
 
 <!-- LOGIN SCREEN -->
-<div class="login-screen" id="loginScreen">
+<!-- SPLASH (shown during auth check) -->
+<div class="splash-screen" id="splashScreen">
+  <div class="splash-logo">💸</div>
+  <div class="splash-dots">
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+  </div>
+</div>
+
+<div class="login-screen" id="loginScreen" style="display:none">
   <!-- Glow orbs -->
   <div class="login-orb" style="width:300px;height:300px;background:#7c6dfa;top:-80px;left:-80px;animation-delay:0s"></div>
   <div class="login-orb" style="width:250px;height:250px;background:#fa6d8f;bottom:-60px;right:-60px;animation-delay:2s"></div>
@@ -1487,11 +1523,8 @@ async function handleSignIn() {
 
 async function handleSignOut() {
   toggleUserMenu();
-  // Remove real-time listener
-  if (_rtdbListener && window._fbOff) {
-    window._fbOff(window._fbRef(window._fbDb, userPath('transactions')));
-    _rtdbListener = null;
-  }
+  // Unsubscribe from real-time listener
+  if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
   await window._fbSignOut();
   currentUser = null;
   data = { transactions: [] };
@@ -1516,9 +1549,14 @@ document.addEventListener('click', e => {
 
 // Called when Firebase auth state changes
 window._onAuthReady = async (user) => {
+  // Always hide splash first
+  const splash = document.getElementById('splashScreen');
+  if (splash) splash.style.display = 'none';
+
   if (user) {
     currentUser = user;
-    // Update UI
+
+    // Update avatar and user menu
     const avatar = document.getElementById('userAvatar');
     if (avatar && user.photoURL) {
       avatar.src = user.photoURL;
@@ -1527,20 +1565,28 @@ window._onAuthReady = async (user) => {
     document.getElementById('userMenuName').textContent = user.displayName || 'Пользователь';
     document.getElementById('userMenuEmail').textContent = user.email || '';
 
-    // Show app, hide login
+    // Show app immediately (with cached data)
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
 
+    // Init UI right away with whatever is in cache
+    initApp();
+
+    // Then load fresh data from Firebase in background
     await loadFromDB();
 
-    // Init app with fresh data
-    initApp();
+    // Refresh UI with fresh data
+    loadSettings();
     refreshAll();
-    showToast(`Добро пожаловать, ${user.displayName ? user.displayName.split(' ')[0] : ''}! 👋`, 'success');
+    if (document.getElementById('tab-goals').classList.contains('active')) renderGoals();
+
+    const name = user.displayName ? user.displayName.split(' ')[0] : '';
+    showToast(`Добро пожаловать${name ? ', ' + name : ''}! 👋`, 'success');
   } else {
-    // Not logged in — show login screen
+    // Not logged in — show login screen with animation
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('mainApp').style.display = 'none';
+    spawnCoins();
   }
 };
 
@@ -1565,16 +1611,17 @@ function initApp() {
 }
 
 function init() {
-  spawnCoins();
-  // Just show login screen initially — Firebase module will call _onAuthReady
-  // If Firebase not ready yet after 3s, allow offline mode
+  // Splash is shown by default in HTML
+  // Firebase module will call _onAuthReady which hides splash
+  // If Firebase takes too long — show login after 6s
   setTimeout(() => {
-    if (!currentUser && document.getElementById('loginScreen').style.display !== 'none') {
-      // Firebase might be slow — check if already authed via localStorage cache
-      const cached = localStorage.getItem('fb_user_cache');
-      if (!cached) return; // stay on login
+    const splash = document.getElementById('splashScreen');
+    if (splash && splash.style.display !== 'none' && !currentUser) {
+      splash.style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'flex';
+      spawnCoins();
     }
-  }, 3000);
+  }, 6000);
 }
 
 function setHeaderDate() {
@@ -2919,69 +2966,86 @@ async function saveData() {
 }
 
 // Real-time listener reference for cleanup
-let _rtdbListener = null;
+let _unsubscribe = null; // Firebase onValue unsubscribe function
+
+async function waitForFirebase() {
+  // Wait up to 5s for Firebase module to load
+  for (let i = 0; i < 50; i++) {
+    if (window._fbGet && window._fbOnValue && window._fbRef) return true;
+    await new Promise(r => setTimeout(r, 100));
+  }
+  return false;
+}
 
 async function loadFromDB() {
-  if (!currentUser || !window._fbGet) return;
+  if (!currentUser) return;
 
-  // Load from localStorage cache first for instant display
+  // Show cached data instantly
   const cachedData = lsGet('expenses_data', '{"transactions":[]}');
-  if (cachedData && cachedData.transactions) data = cachedData;
+  if (cachedData && cachedData.transactions) {
+    data = cachedData;
+    refreshAll();
+  }
   goalsData = lsGet('goals_data', '[]') || [];
   const cachedSettings = lsGet('expenses_settings', '{}');
   if (cachedSettings && Object.keys(cachedSettings).length) {
     settings = { ...settings, ...cachedSettings };
   }
 
-  // Load settings and goals once
+  // Wait for Firebase to be ready
+  const ready = await waitForFirebase();
+  if (!ready) {
+    console.warn('Firebase not ready, using cache only');
+    showToast('Офлайн режим', 'error');
+    return;
+  }
+
+  // Load settings + goals once
   try {
     const dbRef = window._fbRef(window._fbDb);
+
     const settSnap = await window._fbGet(window._fbChild(dbRef, userPath('settings')));
     if (settSnap.exists() && settSnap.val()) {
       settings = { ...settings, ...settSnap.val() };
       lsSet('expenses_settings', settings);
     }
+
     const goalsSnap = await window._fbGet(window._fbChild(dbRef, userPath('goals')));
     if (goalsSnap.exists() && goalsSnap.val()) {
       const val = goalsSnap.val();
-      goalsData = Array.isArray(val) ? val : Object.values(val);
+      goalsData = Array.isArray(val) ? val.filter(Boolean) : Object.values(val).filter(Boolean);
       lsSet('goals_data', goalsData);
     }
-  } catch(e) { console.warn('RTDB settings/goals load error:', e); }
+  } catch(e) { console.warn('Settings/goals load error:', e); }
 
-  // Set up REAL-TIME listener for transactions
-  // This fires immediately with current data, then on every change
+  // Subscribe to real-time transactions updates
+  if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
+
   return new Promise((resolve) => {
+    let firstLoad = true;
     const txRef = window._fbRef(window._fbDb, userPath('transactions'));
 
-    // Remove old listener if exists
-    if (_rtdbListener) { window._fbOff(_rtdbListener); }
-
-    let firstLoad = true;
-    _rtdbListener = window._fbOnValue(txRef, (snap) => {
+    _unsubscribe = window._fbOnValue(txRef, (snap) => {
       if (snap.exists() && snap.val() !== null) {
         const val = snap.val();
-        data.transactions = Array.isArray(val) ? val.filter(Boolean) : Object.values(val).filter(Boolean);
-        lsSet('expenses_data', data);
+        data.transactions = (Array.isArray(val) ? val : Object.values(val)).filter(Boolean);
       } else {
         data.transactions = [];
       }
-
-      // Always refresh UI when data changes
+      lsSet('expenses_data', data);
       refreshAll();
       renderHistory();
 
       if (firstLoad) {
         firstLoad = false;
-        console.log('✅ Firebase synced:', data.transactions.length, 'transactions');
+        console.log('✅ Synced:', data.transactions.length, 'transactions');
         resolve();
       } else {
-        // Real-time update from another device
-        showToast('🔄 Данные обновлены', 'success');
+        showToast('🔄 Синхронизировано', 'success');
       }
-    }, (e) => {
-      console.warn('RTDB listener error:', e);
-      showToast('Офлайн — данные из кэша', 'error');
+    }, (err) => {
+      console.error('RTDB error:', err.code, err.message);
+      showToast('Ошибка синхронизации: ' + err.code, 'error');
       resolve();
     });
   });
