@@ -2798,11 +2798,27 @@ async function handleImportFile(e, typeHint) {
       console.log('CSV headers:', headers);
 
       // Flexible column detection
-      const iDate = headers.findIndex(h => h.includes('дат') || h.includes('date'));
-      const iName = headers.findIndex(h => h.includes('назван') || h.includes('name') || h.includes('статья') || h.includes('опис'));
-      const iAmt  = headers.findIndex(h => h.includes('сумм') || h.includes('amount') || h.includes('sum'));
-      const iType = headers.findIndex(h => h.includes('тип') || h.includes('type'));
-      const iCat  = headers.findIndex(h => h.includes('катег') || h.includes('category'));
+      // Exact match first, then partial
+      const iDate = headers.findIndex(h => h === 'дата' || h === 'date') >= 0
+        ? headers.findIndex(h => h === 'дата' || h === 'date')
+        : headers.findIndex(h => h.includes('дат') || h.includes('date'));
+
+      const iName = headers.findIndex(h => h.includes('статья') || h === 'название' || h === 'name' || h.includes('назван') || h.includes('опис'));
+
+      // Amount: "Расход" column (not "Статья расходов")
+      const iAmt = (() => {
+        // Try exact match first
+        let i = headers.findIndex(h => h === 'расход' || h === 'сумма' || h === 'amount');
+        if (i >= 0) return i;
+        // Partial — but skip if contains "статья"
+        return headers.findIndex(h =>
+          (h.includes('расход') && !h.includes('статья')) ||
+          h.includes('сумм') || h.includes('sum')
+        );
+      })();
+
+      const iType = headers.findIndex(h => h.includes('тип') || h === 'type');
+      const iCat  = headers.findIndex(h => h.includes('катег') || h === 'category');
       const iNote = headers.findIndex(h => h.includes('замет') || h.includes('note') || h.includes('коммент'));
 
       console.log('Columns: date='+iDate+' name='+iName+' amt='+iAmt+' type='+iType);
