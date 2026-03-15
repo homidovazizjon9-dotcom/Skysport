@@ -1333,11 +1333,17 @@
         <h3>📊 Данные</h3>
         <div class="settings-row">
           <label>Импорт из JSON</label>
-          <button class="copy-btn" style="width:auto;padding:8px 16px;color:var(--accent);border-color:var(--accent)" onclick="importJSON()">📤 Импорт</button>
+          <label class="copy-btn" style="width:auto;padding:8px 16px;color:var(--accent);border-color:var(--accent);cursor:pointer">
+            📤 JSON
+            <input type="file" accept=".json" style="display:none" onchange="handleImportFile(event,'json')">
+          </label>
         </div>
         <div class="settings-row">
           <label>Импорт из CSV (Google Sheets)</label>
-          <button class="copy-btn" style="width:auto;padding:8px 16px;color:var(--accent);border-color:var(--accent)" onclick="importCSV()">📤 CSV</button>
+          <label class="copy-btn" style="width:auto;padding:8px 16px;color:var(--accent);border-color:var(--accent);cursor:pointer">
+            📤 CSV
+            <input type="file" accept=".csv" style="display:none" onchange="handleImportFile(event,'csv')">
+          </label>
         </div>
         <div class="settings-row">
           <label>Экспорт в Excel (.xlsx)</label>
@@ -1355,7 +1361,6 @@
           <label>Очистить все данные</label>
           <button class="copy-btn" style="width:auto;padding:8px 16px;color:var(--accent2);border-color:var(--accent2)" onclick="clearData()">Очистить</button>
         </div>
-        <input type="file" id="importFileInput" accept=".json,.csv" style="display:none" onchange="handleImportFile(event)">
       </div>
 
     </div>
@@ -2948,34 +2953,21 @@ function refreshAll() {
   renderHome();
 }
 
-function importJSON() {
-  const input = document.getElementById('importFileInput');
-  input.accept = '.json';
-  input.onchange = handleImportFile;
-  input.click();
-}
-
-function importCSV() {
-  const input = document.getElementById('importFileInput');
-  input.accept = '.csv';
-  input.onchange = handleImportFile;
-  input.click();
-}
-
-async function handleImportFile(e) {
+async function handleImportFile(e, typeHint) {
+  // typeHint: 'json' or 'csv' — passed from inline handler
   const file = e.target.files[0];
   if (!file) return;
   const text = await file.text();
   let imported = [];
 
   try {
-    if (file.name.endsWith('.json')) {
+    if (typeHint === 'json' || file.name.endsWith('.json')) {
       // JSON format from our own export
       const parsed = JSON.parse(text);
       imported = parsed.transactions || parsed || [];
       if (!Array.isArray(imported)) throw new Error('Неверный формат JSON');
 
-    } else if (file.name.endsWith('.csv')) {
+    } else if (typeHint === 'csv' || file.name.endsWith('.csv')) {
       // Remove BOM if present
       const cleanText = text.replace(/^\uFEFF/, '').replace(/\r/g, '');
       const lines = cleanText.split('\n').filter(l => l.trim());
