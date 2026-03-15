@@ -2749,7 +2749,21 @@ async function handleImportFile(e, typeHint) {
   // typeHint: 'json' or 'csv' — passed from inline handler
   const file = e.target.files[0];
   if (!file) return;
-  const text = await file.text();
+  // Try UTF-8 first, fallback to Windows-1251 for files from Google Sheets/Excel
+  let text;
+  try {
+    const buf = await file.arrayBuffer();
+    // Try UTF-8
+    const utf8 = new TextDecoder('utf-8').decode(buf);
+    // If we see replacement chars (кракозябры) — try windows-1251
+    if (utf8.includes('â€') || utf8.includes('РЎ') || utf8.includes('Р°')) {
+      text = new TextDecoder('windows-1251').decode(buf);
+    } else {
+      text = utf8;
+    }
+  } catch(e) {
+    text = await file.text();
+  }
   let imported = [];
 
   try {
