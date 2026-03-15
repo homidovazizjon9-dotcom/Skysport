@@ -1633,7 +1633,7 @@ function init() {
     if (!stillShowing) { clearInterval(check); return; }
 
     // After 5s with no response — show login
-    if (waited >= 5000 && !currentUser) {
+    if (waited >= 3000 && !currentUser) {
       clearInterval(check);
       splash.style.display = 'none';
       document.getElementById('loginScreen').style.display = 'flex';
@@ -2976,60 +2976,85 @@ async function handleImportFile(e) {
       if (!Array.isArray(imported)) throw new Error('Неверный формат JSON');
 
     } else if (file.name.endsWith('.csv')) {
-      // CSV format: Date, Name, Amount, Currency, Type, Category, Note
-      const lines = text.split('\n').filter(l => l.trim());
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      // Remove BOM if present
+      const cleanText = text.replace(/^\uFEFF/, '').replace(/\r/g, '');
+      const lines = cleanText.split('\n').filter(l => l.trim());
+      if (lines.length < 2) throw new Error('CSV файл пустой или содержит только заголовки');
 
-      // Detect column positions
+      // Auto-detect delimiter: comma or semicolon
+      const delim = lines[0].includes(';') ? ';' : ',';
+
+      function parseLine(line) {
+        const result = [];
+        let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+          if (line[i] === '"') { inQ = !inQ; continue; }
+          if (line[i] === delim && !inQ) { result.push(cur.trim()); cur = ''; continue; }
+          cur += line[i];
+        }
+        result.push(cur.trim());
+        return result;
+      }
+
+      const headers = parseLine(lines[0]).map(h => h.toLowerCase().replace(/['"]/g,'').trim());
+      console.log('CSV headers:', headers);
+
+      // Flexible column detection
       const iDate = headers.findIndex(h => h.includes('дат') || h.includes('date'));
-      const iName = headers.findIndex(h => h.includes('назван') || h.includes('name') || h.includes('статья'));
-      const iAmt  = headers.findIndex(h => h.includes('сумм') || h.includes('amount'));
+      const iName = headers.findIndex(h => h.includes('назван') || h.includes('name') || h.includes('статья') || h.includes('опис'));
+      const iAmt  = headers.findIndex(h => h.includes('сумм') || h.includes('amount') || h.includes('sum'));
       const iType = headers.findIndex(h => h.includes('тип') || h.includes('type'));
       const iCat  = headers.findIndex(h => h.includes('катег') || h.includes('category'));
-      const iNote = headers.findIndex(h => h.includes('замет') || h.includes('note'));
+      const iNote = headers.findIndex(h => h.includes('замет') || h.includes('note') || h.includes('коммент'));
+
+      console.log('Columns: date='+iDate+' name='+iName+' amt='+iAmt+' type='+iType);
+
+      // If no headers found — try positional (col 0=date, 1=name, 2=amount)
+      const usePositional = iDate < 0 && iName < 0 && iAmt < 0;
 
       for (let i = 1; i < lines.length; i++) {
-        // Handle quoted values
-        const cols = lines[i].match(/(".*?"|[^,]+)(?=,|$)/g) || lines[i].split(',');
-        const clean = cols.map(c => c.replace(/^"|"$/g, '').trim());
+        const cols = parseLine(lines[i]);
+        if (cols.every(c => !c)) continue;
 
-        const dateRaw = iDate >= 0 ? clean[iDate] : '';
-        const name    = iName >= 0 ? clean[iName] : 'Импорт';
-        const amount  = parseFloat(iAmt >= 0 ? clean[iAmt] : 0) || 0;
-        const typeRaw = iType >= 0 ? clean[iType] : '';
-        const catRaw  = iCat >= 0 ? clean[iCat] : '';
-        const note    = iNote >= 0 ? clean[iNote] : '';
+        const dateRaw = usePositional ? cols[0] : (iDate >= 0 ? cols[iDate] : '');
+        const name    = usePositional ? (cols[1] || 'Импорт') : (iName >= 0 ? cols[iName] : 'Импорт');
+        const amtRaw  = usePositional ? cols[2] : (iAmt >= 0 ? cols[iAmt] : '0');
+        const amount  = parseFloat((amtRaw || '0').replace(/\s/g,'').replace(',','.')) || 0;
+        const typeRaw = iType >= 0 ? cols[iType] : '';
+        const catRaw  = iCat >= 0 ? cols[iCat] : '';
+        const note    = iNote >= 0 ? (cols[iNote] || '') : '';
 
         if (!amount || !name) continue;
 
-        // Normalize date to YYYY-MM-DD
-        let date = dateRaw;
-        if (dateRaw.includes('.')) {
-          const parts = dateRaw.split('.');
-          if (parts.length === 3) {
-            date = parts[2].length === 4
-              ? `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`
-              : `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
+        // Normalize date: DD.MM.YYYY or YYYY-MM-DD
+        let date = dateRaw || '';
+        if (date.includes('.')) {
+          const p = date.split('.');
+          if (p.length === 3) {
+            date = p[2].length === 4
+              ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`
+              : `20${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
           }
         }
+        if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          date = new Date().toISOString().split('T')[0];
+        }
 
-        // Map category name to id
         const typeStr = typeRaw.toLowerCase();
         const type = typeStr.includes('доход') || typeStr.includes('income') ? 'income' : 'expense';
         const catStr = catRaw.toLowerCase();
-        const cat = CATS.find(c =>
-          catStr.includes(c.label.toLowerCase()) || catStr === c.id
-        ) || CATS[CATS.length - 1];
+        const cat = CATS.find(c => catStr.includes(c.label.toLowerCase()) || catStr === c.id)
+          || CATS[CATS.length - 1];
 
         imported.push({
-          id: Date.now().toString() + i,
-          date: date || new Date().toISOString().split('T')[0],
-          name, amount, note,
-          type,
+          id: Date.now().toString() + '_' + i,
+          date, name, amount, note, type,
           category: type === 'income' ? 'income' : cat.id,
           synced: true
         });
       }
+
+      console.log('CSV parsed:', imported.length, 'rows');
     }
 
     if (!imported.length) {
