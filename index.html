@@ -394,6 +394,128 @@
   .ms-cancel { padding:8px 14px; border-radius:8px; background:var(--surface3); border:none; color:var(--text2); font-size:13px; font-weight:600; cursor:pointer; }
   .ms-delete { padding:8px 14px; border-radius:8px; background:var(--accent2); border:none; color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
 
+
+  /* ====== LOGIN SCREEN ====== */
+  .login-screen {
+    position:fixed; inset:0; z-index:1000;
+    background:var(--bg);
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    padding:40px 30px;
+  }
+  .login-logo { font-size:64px; margin-bottom:16px; }
+  .login-title {
+    font-family:'Unbounded',sans-serif; font-size:22px;
+    font-weight:800; margin-bottom:8px; text-align:center;
+  }
+  .login-sub {
+    font-size:14px; color:var(--text2); text-align:center;
+    margin-bottom:40px; line-height:1.5;
+  }
+  .login-btn {
+    display:flex; align-items:center; gap:12px;
+    padding:16px 28px; border-radius:16px;
+    background:white; color:#1a1a1a;
+    border:none; cursor:pointer; font-size:15px; font-weight:700;
+    box-shadow:0 4px 20px rgba(0,0,0,0.3);
+    transition:all 0.2s; width:100%; justify-content:center;
+  }
+  .login-btn:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(0,0,0,0.4); }
+  .login-btn:active { transform:scale(0.97); }
+  .login-btn img { width:22px; height:22px; }
+  .login-loading { font-size:13px; color:var(--text2); margin-top:16px; }
+  .login-features {
+    display:flex; flex-direction:column; gap:10px;
+    margin-bottom:36px; width:100%;
+  }
+  .login-feature {
+    display:flex; align-items:center; gap:12px;
+    font-size:13px; color:var(--text2);
+  }
+  .login-feature span:first-child { font-size:20px; }
+
+  /* User avatar in header */
+  .user-avatar {
+    width:32px; height:32px; border-radius:50%;
+    object-fit:cover; cursor:pointer;
+    border:2px solid var(--accent);
+    transition:transform 0.2s;
+  }
+  .user-avatar:hover { transform:scale(1.1); }
+  .user-menu {
+    position:fixed; top:60px; right:16px; z-index:200;
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:var(--radius); padding:8px;
+    min-width:200px; display:none;
+    box-shadow:0 8px 32px rgba(0,0,0,0.4);
+    animation:fadeUp 0.2s both;
+  }
+  .user-menu.show { display:block; }
+  .user-menu-name { font-size:13px; font-weight:700; padding:8px 12px 4px; }
+  .user-menu-email { font-size:11px; color:var(--text2); padding:0 12px 8px; border-bottom:1px solid var(--border); }
+  .user-menu-item {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; border-radius:8px; cursor:pointer;
+    font-size:13px; font-weight:600; transition:background 0.15s;
+  }
+  .user-menu-item:hover { background:var(--surface3); }
+  .user-menu-item.danger { color:var(--accent2); }
+
+
+  /* ====== CURRENCY SELECTOR ====== */
+  .currency-modal {
+    position:fixed; inset:0; z-index:2000;
+    background:rgba(0,0,0,0.7); backdrop-filter:blur(8px);
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .currency-modal-box {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:28px; width:100%;
+    max-width:340px; animation: fadeUp 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  .currency-modal-title {
+    font-family:'Unbounded',sans-serif; font-size:16px;
+    font-weight:800; margin-bottom:6px; text-align:center;
+  }
+  .currency-modal-sub {
+    font-size:13px; color:var(--text2); text-align:center;
+    margin-bottom:24px; line-height:1.5;
+  }
+  .currency-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+    margin-bottom:8px;
+  }
+  .currency-opt {
+    border:2px solid var(--border); border-radius:var(--radius-sm);
+    background:var(--surface2); padding:16px 12px;
+    cursor:pointer; text-align:center; transition:all 0.2s;
+  }
+  .currency-opt:hover { border-color:var(--accent); background:rgba(124,109,250,0.1); }
+  .currency-opt.selected { border-color:var(--accent); background:rgba(124,109,250,0.15); }
+  .currency-opt-symbol { font-size:28px; font-weight:800; margin-bottom:4px; color:var(--accent); }
+  .currency-opt-name { font-size:12px; color:var(--text2); font-weight:600; }
+
+  /* ====== SMART WIDGET ====== */
+  .smart-widget {
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+  }
+  .sw-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:14px;
+    display:flex; flex-direction:column; gap:4px;
+    animation: txIn 0.4s both;
+  }
+  .sw-card.wide { grid-column:1/-1; }
+  .sw-icon { font-size:20px; }
+  .sw-label { font-size:11px; color:var(--text2); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+  .sw-value { font-size:18px; font-weight:800; font-family:'Unbounded',sans-serif; }
+  .sw-sub { font-size:11px; color:var(--text2); }
+  .sw-trend-up { color:var(--accent2); }
+  .sw-trend-down { color:var(--accent3); }
+  .sw-bar-wrap { height:4px; background:var(--surface3); border-radius:2px; margin-top:6px; overflow:hidden; }
+  .sw-bar-fill { height:100%; border-radius:2px; transition:width 1s cubic-bezier(0.34,1.56,0.64,1); }
+
   /* ====== GOALS ====== */
   .goals-section { padding:0 20px; animation:fadeUp 0.5s 0.2s both; }
 
@@ -752,25 +874,123 @@
   .ct-diff.better { color:var(--accent3); }
   .ct-diff.worse { color:var(--accent2); }
 </style>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBeiC9-NpXiHMoDACAsCwVd-mZsx-f2xVI",
+    authDomain: "spenses-f8c91.firebaseapp.com",
+    projectId: "spenses-f8c91",
+    storageBucket: "spenses-f8c91.firebasestorage.app",
+    messagingSenderId: "609345629874",
+    appId: "1:609345629874:web:37a5acb549a651d4b923ab"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const provider = new GoogleAuthProvider();
+
+  // Expose to global scope for non-module script
+  window._fbAuth = auth;
+  window._fbDb = db;
+  window._fbProvider = provider;
+  window._fbSignIn = () => signInWithPopup(auth, provider);
+  window._fbSignOut = () => signOut(auth);
+  window._fbOnAuth = (cb) => onAuthStateChanged(auth, cb);
+  window._fbDoc = doc;
+  window._fbSetDoc = setDoc;
+  window._fbGetDoc = getDoc;
+  window._fbCollection = collection;
+  window._fbGetDocs = getDocs;
+  window._fbDeleteDoc = deleteDoc;
+  window._fbWriteBatch = writeBatch;
+  window._firebaseReady = true;
+
+  // Trigger auth state listener once firebase is ready
+  onAuthStateChanged(auth, (user) => {
+    if (window._onAuthReady) window._onAuthReady(user);
+  });
+</script>
 </head>
 <body>
 
-<div class="app">
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-logo">💸</div>
+  <div class="login-title">Мои расходы</div>
+  <div class="login-sub">Личный трекер расходов.<br>Данные хранятся в облаке — только у тебя.</div>
+  <div class="login-features">
+    <div class="login-feature"><span>🔒</span><span>Только ты видишь свои данные</span></div>
+    <div class="login-feature"><span>☁️</span><span>Синхронизация на всех устройствах</span></div>
+    <div class="login-feature"><span>🚀</span><span>Вход одним нажатием</span></div>
+  </div>
+  <button class="login-btn" onclick="handleSignIn()">
+    <img src="https://www.google.com/favicon.ico" alt="G">
+    Войти через Google
+  </button>
+  <div class="login-loading" id="loginLoading" style="display:none">⏳ Входим...</div>
+</div>
+
+
+<!-- CURRENCY SELECTOR MODAL -->
+<div class="currency-modal" id="currencyModal" style="display:none">
+  <div class="currency-modal-box">
+    <div class="currency-modal-title">Выбери валюту 💱</div>
+    <div class="currency-modal-sub">Это можно изменить позже в настройках</div>
+    <div class="currency-grid">
+      <div class="currency-opt" onclick="selectCurrency('TJS','сом','сом')">
+        <div class="currency-opt-symbol">сом</div>
+        <div class="currency-opt-name">Сомони (TJS)</div>
+      </div>
+      <div class="currency-opt" onclick="selectCurrency('RUB','₽','₽')">
+        <div class="currency-opt-symbol">₽</div>
+        <div class="currency-opt-name">Рубль (RUB)</div>
+      </div>
+      <div class="currency-opt" onclick="selectCurrency('USD','$','$')">
+        <div class="currency-opt-symbol">$</div>
+        <div class="currency-opt-name">Доллар (USD)</div>
+      </div>
+      <div class="currency-opt" onclick="selectCurrency('EUR','€','€')">
+        <div class="currency-opt-symbol">€</div>
+        <div class="currency-opt-name">Евро (EUR)</div>
+      </div>
+      <div class="currency-opt" onclick="selectCurrency('KZT','₸','₸')">
+        <div class="currency-opt-symbol">₸</div>
+        <div class="currency-opt-name">Тенге (KZT)</div>
+      </div>
+      <div class="currency-opt" onclick="selectCurrency('UZS','сум','сум')">
+        <div class="currency-opt-symbol">сум</div>
+        <div class="currency-opt-name">Сум (UZS)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- USER MENU -->
+<div class="user-menu" id="userMenu">
+  <div class="user-menu-name" id="userMenuName">—</div>
+  <div class="user-menu-email" id="userMenuEmail">—</div>
+  <div class="user-menu-item danger" onclick="handleSignOut()">🚪 Выйти из аккаунта</div>
+</div>
+
+<div class="app" id="mainApp" style="display:none">
 
   <!-- HEADER -->
   <div class="header">
     <div>
-      <div class="header-title">Мои расходы</div>
+      <div class="header-title" id="headerGreeting">Привет! 👋</div>
       <div class="header-sub" id="headerDate"></div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
-      <button class="sync-btn" onclick="importFromSheets()" title="Загрузить данные из Google Sheets" id="importBtn">
-        <span id="importIcon">📥</span>
-      </button>
-      <button class="sync-btn" onclick="syncToSheets()" title="Отправить новые записи в Google Sheets">
-        <span id="syncIcon">☁️</span>
-        <span class="sync-badge" id="syncBadge"></span>
-      </button>
+      <img class="user-avatar" id="userAvatar" src="" alt="" onclick="toggleUserMenu()" style="display:none">
     </div>
   </div>
 
@@ -791,7 +1011,7 @@
       <div class="balance-label">Остаток</div>
       <div class="balance-amount">
         <span id="balanceAmount">0</span>
-        <span class="balance-currency">сом</span>
+        <span class="balance-currency" id="currencyLabel">сом</span>
       </div>
       <div id="budgetProgress" class="budget-progress" style="display:none">
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)">
@@ -803,11 +1023,11 @@
       <div class="balance-meta">
         <div class="balance-meta-item">
           <div class="bm-label">Доходы</div>
-          <div class="bm-val income">+<span id="totalIncome">0</span> сом</div>
+          <div class="bm-val income">+<span id="totalIncome">0</span> <span class="cur">сом</span></div>
         </div>
         <div class="balance-meta-item">
           <div class="bm-label">Расходы</div>
-          <div class="bm-val expense">-<span id="totalExpense">0</span> сом</div>
+          <div class="bm-val expense">-<span id="totalExpense">0</span> <span class="cur">сом</span></div>
         </div>
         <div class="balance-meta-item">
           <div class="bm-label">Операций</div>
@@ -821,16 +1041,9 @@
     <!-- Today widget -->
     <div class="today-widget" id="todayWidget"></div>
 
-    <!-- AI Insights -->
-    <div class="ai-card" id="aiCard" style="margin:0 20px 16px">
-      <div class="ai-header">
-        <span class="ai-icon">🤖</span>
-        <span class="ai-title">ИИ-анализ</span>
-        <button onclick="loadAiInsights()" style="margin-left:auto;background:rgba(124,109,250,0.15);border:1px solid var(--accent);color:var(--accent);padding:4px 10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer">Обновить</button>
-      </div>
-      <div class="ai-text" id="aiText">
-        <div class="ai-loading"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>
-      </div>
+    <!-- Smart Analytics Widget -->
+    <div style="padding:0 20px 16px">
+      <div id="smartWidget" class="smart-widget"></div>
     </div>
 
     <!-- Recent -->
@@ -972,14 +1185,40 @@
   <div id="tab-settings" class="tab-content">
     <div class="settings-section">
 
+      <!-- User info card -->
+      <div class="settings-card" id="userInfoCard">
+        <h3>👤 Аккаунт</h3>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <img id="settingsAvatar" src="" style="width:44px;height:44px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">
+          <div>
+            <div style="font-size:14px;font-weight:700" id="settingsName">—</div>
+            <div style="font-size:12px;color:var(--text2)" id="settingsEmail">—</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--accent3);background:rgba(109,250,214,0.1);padding:10px;border-radius:8px;margin-bottom:12px">
+          🔒 Ваши данные хранятся в Firebase — недоступны другим пользователям
+        </div>
+        <button class="copy-btn" style="width:100%;color:var(--accent2);border-color:var(--accent2)" onclick="handleSignOut()">🚪 Выйти из аккаунта</button>
+      </div>
+
+      <div class="settings-card">
+        <h3>💱 Валюта</h3>
+        <div class="settings-row">
+          <label>Текущая валюта</label>
+          <button class="copy-btn" style="width:auto;padding:8px 16px" onclick="showCurrencyModal()">
+            <span id="currencySettingsBtn">сом</span> Изменить
+          </button>
+        </div>
+      </div>
+
       <div class="settings-card">
         <h3>💰 Бюджет</h3>
         <div class="settings-row">
-          <label>Начальная сумма (сом)</label>
+          <label>Начальная сумма (<span class="cur">сом</span>)</label>
           <input class="field-input" type="number" id="initialBalance" placeholder="5000" oninput="saveSettings()">
         </div>
         <div class="settings-row">
-          <label>Месячный бюджет (сом)</label>
+          <label>Месячный бюджет (<span class="cur">сом</span>)</label>
           <input class="field-input" type="number" id="monthBudget" placeholder="необязательно" oninput="saveSettings()">
         </div>
       </div>
@@ -1146,7 +1385,7 @@ const INCOME_SOURCES = [
 ];
 
 let data = JSON.parse(localStorage.getItem('expenses_data') || '{"transactions":[]}');
-const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzp5IIAqeJ-kp_mfIBI6ElQZ7dYC-3eePA3DLIP-g87HJGV9D3_mB5mpqblllgBb_WPYw/exec';
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxSsLxk9ZWDPal4oviUZVuOtogwcO1u-0gh-4RafXJQUbesrIoBSiTRZo19h16RCMQICQ/exec';
 let settings = JSON.parse(localStorage.getItem('expenses_settings') || '{"initialBalance":0,"monthBudget":0,"scriptUrl":""}');
 if (!settings.scriptUrl || settings.scriptUrl.includes('AKfycbwHTrn') || settings.scriptUrl.includes('AKfycbxOcso')) {
   settings.scriptUrl = DEFAULT_SCRIPT_URL;
@@ -1165,7 +1404,72 @@ let editingTxId = null;
 // ==============================
 // INIT
 // ==============================
-function init() {
+// Auth handlers
+async function handleSignIn() {
+  document.getElementById('loginLoading').style.display = 'block';
+  try {
+    await window._fbSignIn();
+  } catch(e) {
+    document.getElementById('loginLoading').style.display = 'none';
+    showToast('Ошибка входа: ' + e.message, 'error');
+  }
+}
+
+async function handleSignOut() {
+  toggleUserMenu();
+  await window._fbSignOut();
+  currentUser = null;
+  data = { transactions: [] };
+  goalsData = [];
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  showToast('Вы вышли из аккаунта', 'success');
+}
+
+function toggleUserMenu() {
+  document.getElementById('userMenu').classList.toggle('show');
+}
+
+// Close user menu on outside click
+document.addEventListener('click', e => {
+  const menu = document.getElementById('userMenu');
+  const avatar = document.getElementById('userAvatar');
+  if (menu && !menu.contains(e.target) && e.target !== avatar) {
+    menu.classList.remove('show');
+  }
+});
+
+// Called when Firebase auth state changes
+window._onAuthReady = async (user) => {
+  if (user) {
+    currentUser = user;
+    // Update UI
+    const avatar = document.getElementById('userAvatar');
+    if (avatar && user.photoURL) {
+      avatar.src = user.photoURL;
+      avatar.style.display = 'block';
+    }
+    document.getElementById('userMenuName').textContent = user.displayName || 'Пользователь';
+    document.getElementById('userMenuEmail').textContent = user.email || '';
+
+    // Show app, hide login
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+
+    // Load user data from Firestore
+    showToast('Загружаем ваши данные...', 'success');
+    await loadFromFirestore();
+
+    // Init app
+    initApp();
+  } else {
+    // Not logged in — show login screen
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('mainApp').style.display = 'none';
+  }
+};
+
+function initApp() {
   renderCatGrid();
   renderSourceGrid();
   renderFilterRow();
@@ -1174,16 +1478,27 @@ function init() {
   refreshAll();
   setHeaderDate();
   renderAppsScriptCode();
+  updateGreeting();
+  updateCurrencyUI();
 
-  const pending = localStorage.getItem('pending_sync');
-  if (pending) document.getElementById('syncBadge').classList.add('show');
-
-  if (data.transactions.length === 0 && settings.scriptUrl) {
-    setTimeout(() => importFromSheets(true), 800);
+  // Show currency selector if not chosen yet
+  if (!settings.currency) {
+    setTimeout(() => {
+      document.getElementById('currencyModal').style.display = 'flex';
+    }, 600);
   }
+}
 
-  // Load AI insights after a short delay
-  setTimeout(loadAiInsights, 1200);
+function init() {
+  // Just show login screen initially — Firebase module will call _onAuthReady
+  // If Firebase not ready yet after 3s, allow offline mode
+  setTimeout(() => {
+    if (!currentUser && document.getElementById('loginScreen').style.display !== 'none') {
+      // Firebase might be slow — check if already authed via localStorage cache
+      const cached = localStorage.getItem('fb_user_cache');
+      if (!cached) return; // stay on login
+    }
+  }, 3000);
 }
 
 function setHeaderDate() {
@@ -1204,13 +1519,22 @@ function loadSettings() {
   document.getElementById('initialBalance').value = settings.initialBalance || '';
   document.getElementById('monthBudget').value = settings.monthBudget || '';
   document.getElementById('scriptUrl').value = settings.scriptUrl || '';
+  updateCurrencyUI();
+  if (currentUser) {
+    const el = document.getElementById('settingsName');
+    const em = document.getElementById('settingsEmail');
+    const av = document.getElementById('settingsAvatar');
+    if (el) el.textContent = currentUser.displayName || 'Пользователь';
+    if (em) em.textContent = currentUser.email || '';
+    if (av && currentUser.photoURL) av.src = currentUser.photoURL;
+  }
 }
 
 function saveSettings() {
   settings.initialBalance = parseFloat(document.getElementById('initialBalance').value) || 0;
   settings.monthBudget = parseFloat(document.getElementById('monthBudget').value) || 0;
   settings.scriptUrl = document.getElementById('scriptUrl').value || '';
-  localStorage.setItem('expenses_settings', JSON.stringify(settings));
+  saveSettingsToFirestore();
   refreshAll();
 }
 
@@ -1416,12 +1740,15 @@ function renderHome() {
     return `<div class="stat-chip">
       <div class="sc-icon">${cat.icon}</div>
       <div class="sc-label">${cat.label}</div>
-      <div class="sc-val" style="color:${cat.color}">${formatNum(val)} сом</div>
+      <div class="sc-val" style="color:${cat.color}">${formatNum(val)} ${CUR()}</div>
     </div>`;
   }).join('');
 
   // Today widget
   renderTodayWidget();
+
+  // Smart widget
+  renderSmartWidget();
 
   // Recent 5
   const list = document.getElementById('recentList');
@@ -1444,7 +1771,7 @@ function renderTodayWidget() {
   if (!todayTxs.length) {
     el.innerHTML = `<div class="today-header">
       <span class="today-title">Сегодня</span>
-      <span class="today-total">0 сом</span>
+      <span class="today-total">0 <span class="cur">сом</span></span>
     </div>
     <div class="today-empty">Нет расходов сегодня 🎉</div>`;
     return;
@@ -1452,7 +1779,7 @@ function renderTodayWidget() {
 
   el.innerHTML = `<div class="today-header">
     <span class="today-title">Сегодня</span>
-    <span class="today-total">${formatNum(todayTotal)} сом</span>
+    <span class="today-total">${formatNum(todayTotal)} ${CUR()}</span>
   </div>
   <div class="today-items">
     ${todayTxs.map(tx => {
@@ -1460,7 +1787,7 @@ function renderTodayWidget() {
       return `<div class="today-row tx-item" data-id="${tx.id}" style="border-radius:10px;border:none;padding:8px 10px">
         <span class="today-icon tx-icon" style="width:28px;height:28px;font-size:14px;border-radius:8px;background:${cat.color}22">${cat.icon}</span>
         <span class="today-name tx-info"><div class="tx-name" style="font-size:13px">${tx.name}</div></span>
-        <span class="today-amt tx-amount" style="font-size:13px;color:var(--accent2)">${formatNum(tx.amount)} сом</span>
+        <span class="today-amt tx-amount" style="font-size:13px;color:var(--accent2)">${formatNum(tx.amount)} ${CUR()}</span>
       </div>`;
     }).join('')}
   </div>`;
@@ -1523,7 +1850,7 @@ function renderDonut(byCat) {
     li.innerHTML = `
       <div class="legend-dot" style="background:${cat.color}"></div>
       <span class="legend-text">${cat.icon} ${cat.label}</span>
-      <span class="legend-val">${formatNum(val)}сом</span>`;
+      <span class="legend-val">${formatNum(val)}${CUR()}</span>`;
     legend.appendChild(li);
   });
 }
@@ -1563,7 +1890,7 @@ function renderCatBars(byCat, total) {
     return `<div class="cat-bar-item">
       <div class="cat-bar-header">
         <div class="cat-bar-name">${cat.icon} ${cat.label}</div>
-        <div class="cat-bar-val">${formatNum(val)} сом (${pct}%)</div>
+        <div class="cat-bar-val">${formatNum(val)} ${CUR()} (${pct}%)</div>
       </div>
       <div class="cat-bar-track">
         <div class="cat-bar-fill" style="width:${pct}%;background:${cat.color}"></div>
@@ -1741,12 +2068,12 @@ function renderMonthCompare() {
   document.getElementById('compareTotals').innerHTML = `
     <div class="ct-item">
       <div class="ct-label" style="color:var(--accent)">${fmtLabel(compareMonthA)}</div>
-      <div class="ct-val">${formatNum(a.total)} сом</div>
+      <div class="ct-val">${formatNum(a.total)} ${CUR()}</div>
       ${a.total === 0 ? '<div style="font-size:11px;color:var(--text2)">нет расходов</div>' : ''}
     </div>
     <div class="ct-item">
       <div class="ct-label" style="color:var(--accent2)">${fmtLabel(compareMonthB)}</div>
-      <div class="ct-val">${formatNum(b.total)} сом</div>
+      <div class="ct-val">${formatNum(b.total)} ${CUR()}</div>
       ${b.total === 0 ? '<div style="font-size:11px;color:var(--text2)">нет расходов</div>' : ''}
       ${a.total > 0 && b.total > 0 ? `<div class="ct-diff ${diffCls}">${diffText}</div>` : ''}
     </div>`;
@@ -1791,7 +2118,7 @@ function renderTxItem(tx, i) {
         <div class="tx-name">${tx.name}</div>
         <div class="tx-meta">${cat.label} · ${dateStr}${tx.note ? ' · ' + tx.note : ''}</div>
       </div>
-      <div class="tx-amount" style="color:${color}">${sign}${formatNum(tx.amount)} сом</div>
+      <div class="tx-amount" style="color:${color}">${sign}${formatNum(tx.amount)} ${CUR()}</div>
       <div class="tx-btns">
         <button class="tx-btn tx-btn-edit" onclick="event.stopPropagation();openEditModal('${tx.id}')">✏️</button>
         <button class="tx-btn tx-btn-del"  onclick="event.stopPropagation();confirmDeleteTx('${tx.id}')">🗑</button>
@@ -1887,7 +2214,7 @@ function confirmDeleteTx(id) {
   const tx = data.transactions.find(t => t.id === id);
   if (!tx) return;
   document.getElementById('confirmMsg').textContent =
-    `Удалить «${tx.name}» (${formatNum(tx.amount)} сом)?`;
+    `Удалить «${tx.name}» (${formatNum(tx.amount)} ${CUR()})?`;
   document.getElementById('confirmOk').onclick = () => {
     closeConfirm();
     deleteTxConfirmed(id);
@@ -1933,9 +2260,7 @@ const GOAL_EMOJIS = ['🎯','📱','✈️','🚗','🏠','💻','👟','🎮','
 let goalsData = JSON.parse(localStorage.getItem('goals_data') || '[]');
 let selectedGoalEmoji = '🎯';
 
-function saveGoalsData() {
-  localStorage.setItem('goals_data', JSON.stringify(goalsData));
-}
+function saveGoalsData() { saveGoalsToFirestore(); }
 
 function renderGoalEmojiPicker() {
   const row = document.getElementById('goalEmojiRow');
@@ -2009,15 +2334,15 @@ function renderGoals() {
         <button class="goal-del" onclick="deleteGoal('${g.id}')">✕</button>
       </div>
       <div class="goal-amounts">
-        <div class="goal-saved" style="color:${color}">${formatNum(g.saved)} сом</div>
-        <div class="goal-target">из ${formatNum(g.target)} сом</div>
+        <div class="goal-saved" style="color:${color}">${formatNum(g.saved)} ${CUR()}</div>
+        <div class="goal-target">из ${formatNum(g.target)} ${CUR()}</div>
       </div>
       <div class="goal-track">
         <div class="goal-fill" style="width:${pct}%;background:linear-gradient(90deg,${color},${color}99)"></div>
       </div>
       <div class="goal-pct-row">
         <div class="goal-pct" style="color:${color}">${pct}%</div>
-        <div class="goal-remaining">${done ? '✅ Цель достигнута!' : `ещё ${formatNum(remaining)} сом`}</div>
+        <div class="goal-remaining">${done ? '✅ Цель достигнута!' : `ещё ${formatNum(remaining)} ${CUR()}`}</div>
       </div>
       ${!done ? `<div class="goal-deposit-row">
         <input class="field-input goal-deposit-input" type="number" inputmode="decimal"
@@ -2037,7 +2362,7 @@ function depositGoal(id) {
   goal.saved = Math.min(goal.saved + amount, goal.target);
   saveGoalsData();
   renderGoals();
-  showToast(`+${formatNum(amount)} сом к цели ✓`, 'success');
+  showToast(`+${formatNum(amount)} ${CUR()} к цели ✓`, 'success');
 }
 
 function deleteGoal(id) {
@@ -2499,8 +2824,82 @@ function showToast(msg, type = 'success') {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-function saveData() {
+// ==============================
+// FIREBASE DATA LAYER
+// ==============================
+let currentUser = null;
+
+function getUserRef(sub) {
+  return window._fbDoc(window._fbDb, 'users', currentUser.uid, sub, 'main');
+}
+
+async function saveData() {
+  // Always save to localStorage as cache
   localStorage.setItem('expenses_data', JSON.stringify(data));
+  // Save to Firestore if logged in
+  if (currentUser && window._fbSetDoc) {
+    try {
+      await window._fbSetDoc(
+        window._fbDoc(window._fbDb, 'users', currentUser.uid, 'data', 'transactions'),
+        { transactions: data.transactions },
+        { merge: false }
+      );
+    } catch(e) { console.warn('Firestore save error:', e); }
+  }
+}
+
+async function loadFromFirestore() {
+  if (!currentUser || !window._fbGetDoc) return;
+  try {
+    const docSnap = await window._fbGetDoc(
+      window._fbDoc(window._fbDb, 'users', currentUser.uid, 'data', 'transactions')
+    );
+    if (docSnap.exists()) {
+      data = docSnap.data();
+      localStorage.setItem('expenses_data', JSON.stringify(data));
+    }
+    // Also load goals
+    const goalsSnap = await window._fbGetDoc(
+      window._fbDoc(window._fbDb, 'users', currentUser.uid, 'data', 'goals')
+    );
+    if (goalsSnap.exists()) {
+      goalsData = goalsSnap.data().goals || [];
+      localStorage.setItem('goals_data', JSON.stringify(goalsData));
+    }
+    // Load settings
+    const settingsSnap = await window._fbGetDoc(
+      window._fbDoc(window._fbDb, 'users', currentUser.uid, 'data', 'settings')
+    );
+    if (settingsSnap.exists()) {
+      const fs = settingsSnap.data();
+      settings = { ...settings, ...fs };
+      localStorage.setItem('expenses_settings', JSON.stringify(settings));
+    }
+  } catch(e) { console.warn('Firestore load error:', e); }
+}
+
+async function saveGoalsToFirestore() {
+  localStorage.setItem('goals_data', JSON.stringify(goalsData));
+  if (currentUser && window._fbSetDoc) {
+    try {
+      await window._fbSetDoc(
+        window._fbDoc(window._fbDb, 'users', currentUser.uid, 'data', 'goals'),
+        { goals: goalsData }
+      );
+    } catch(e) { console.warn('Goals save error:', e); }
+  }
+}
+
+async function saveSettingsToFirestore() {
+  localStorage.setItem('expenses_settings', JSON.stringify(settings));
+  if (currentUser && window._fbSetDoc) {
+    try {
+      await window._fbSetDoc(
+        window._fbDoc(window._fbDb, 'users', currentUser.uid, 'data', 'settings'),
+        settings
+      );
+    } catch(e) { console.warn('Settings save error:', e); }
+  }
 }
 
 function refreshAll() {
@@ -2515,10 +2914,12 @@ function exportData() {
   a.click();
 }
 
-function clearData() {
+async function clearData() {
   if (confirm('Удалить все записи? Это действие нельзя отменить.')) {
     data = { transactions: [] };
-    saveData();
+    goalsData = [];
+    await saveData();
+    saveGoalsData();
     refreshAll();
     showToast('Данные очищены', 'error');
   }
@@ -2645,6 +3046,148 @@ async function diagnoseTx() {
   }
 
   box.textContent = steps.join('\n');
+}
+
+
+// ==============================
+// CURRENCY
+// ==============================
+const CURRENCIES = {
+  TJS: { code:'TJS', symbol:'сом',  name:'Сомони' },
+  RUB: { code:'RUB', symbol:'₽',    name:'Рубль' },
+  USD: { code:'USD', symbol:'$',    name:'Доллар' },
+  EUR: { code:'EUR', symbol:'€',    name:'Евро' },
+  KZT: { code:'KZT', symbol:'₸',   name:'Тенге' },
+  UZS: { code:'UZS', symbol:'сум', name:'Сум' },
+};
+
+function CUR() {
+  return settings.currency || 'сом';
+}
+
+function updateCurrencyUI() {
+  const sym = CUR();
+  document.querySelectorAll('.cur').forEach(el => el.textContent = sym);
+  const lbl = document.getElementById('currencyLabel');
+  if (lbl) lbl.textContent = sym;
+  const btn = document.getElementById('currencySettingsBtn');
+  if (btn) btn.textContent = sym;
+}
+
+function selectCurrency(code, symbol, display) {
+  settings.currency = symbol;
+  settings.currencyCode = code;
+  saveSettingsToFirestore();
+  document.getElementById('currencyModal').style.display = 'none';
+  updateCurrencyUI();
+  refreshAll();
+  showToast('Валюта: ' + display + ' ✓', 'success');
+}
+
+function showCurrencyModal() {
+  document.getElementById('currencyModal').style.display = 'flex';
+}
+
+// ==============================
+// GREETING
+// ==============================
+function updateGreeting() {
+  const el = document.getElementById('headerGreeting');
+  if (!el) return;
+  const hour = new Date().getHours();
+  const greeting = hour < 6 ? 'Доброй ночи' : hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер';
+  const name = currentUser ? (currentUser.displayName || '').split(' ')[0] : '';
+  el.textContent = name ? `${greeting}, ${name}! 👋` : `${greeting}! 👋`;
+}
+
+// ==============================
+// SMART ANALYTICS WIDGET
+// ==============================
+function renderSmartWidget() {
+  const el = document.getElementById('smartWidget');
+  if (!el) return;
+
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const prevMonth = (() => {
+    const d = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  })();
+
+  const txThis = data.transactions.filter(t => t.date.startsWith(thisMonth) && t.type === 'expense');
+  const txPrev = data.transactions.filter(t => t.date.startsWith(prevMonth) && t.type === 'expense');
+  const sumThis = txThis.reduce((s,t) => s+t.amount, 0);
+  const sumPrev = txPrev.reduce((s,t) => s+t.amount, 0);
+
+  const today = now.toISOString().split('T')[0];
+  const todayTxs = data.transactions.filter(t => t.date === today && t.type === 'expense');
+  const todaySum = todayTxs.reduce((s,t) => s+t.amount, 0);
+
+  // Avg daily spend this month
+  const dayOfMonth = now.getDate();
+  const avgDaily = dayOfMonth > 0 ? Math.round(sumThis / dayOfMonth) : 0;
+
+  // Projected end-of-month
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const projected = Math.round(avgDaily * daysInMonth);
+
+  // Top category this month
+  const byCat = {};
+  txThis.forEach(t => { byCat[t.category] = (byCat[t.category]||0) + t.amount; });
+  const topCatEntry = Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
+  const topCat = topCatEntry ? CATS.find(c=>c.id===topCatEntry[0]) : null;
+
+  // Month-over-month change
+  const momChange = sumPrev > 0 ? Math.round((sumThis - sumPrev) / sumPrev * 100) : null;
+  const momText = momChange === null ? '—' : (momChange > 0 ? `▲ +${momChange}%` : `▼ ${Math.abs(momChange)}%`);
+  const momCls = momChange === null ? '' : momChange > 0 ? 'sw-trend-up' : 'sw-trend-down';
+
+  // Budget progress
+  const budget = settings.monthBudget || 0;
+  const budgetPct = budget > 0 ? Math.min(Math.round(sumThis/budget*100), 100) : 0;
+  const budgetColor = budgetPct < 60 ? '#6dfa9e' : budgetPct < 90 ? '#fad06d' : '#fa6d8f';
+
+  const cur = CUR();
+
+  el.innerHTML = `
+    <div class="sw-card">
+      <div class="sw-icon">📅</div>
+      <div class="sw-label">Этот месяц</div>
+      <div class="sw-value">${formatNum(sumThis)}</div>
+      <div class="sw-sub ${momCls}">${momText} vs прошлый</div>
+    </div>
+    <div class="sw-card">
+      <div class="sw-icon">☀️</div>
+      <div class="sw-label">Сегодня</div>
+      <div class="sw-value">${formatNum(todaySum)}</div>
+      <div class="sw-sub">среднее: ${formatNum(avgDaily)} ${cur}/день</div>
+    </div>
+    <div class="sw-card">
+      <div class="sw-icon">🔮</div>
+      <div class="sw-label">Прогноз на месяц</div>
+      <div class="sw-value">${formatNum(projected)}</div>
+      <div class="sw-sub">при текущем темпе</div>
+    </div>
+    <div class="sw-card">
+      <div class="sw-icon">${topCat ? topCat.icon : '📊'}</div>
+      <div class="sw-label">Топ категория</div>
+      <div class="sw-value" style="font-size:14px">${topCat ? topCat.label : '—'}</div>
+      <div class="sw-sub">${topCatEntry ? formatNum(topCatEntry[1]) + ' ' + cur : 'нет данных'}</div>
+    </div>
+    ${budget > 0 ? `
+    <div class="sw-card wide">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="sw-label">💰 Бюджет месяца</div>
+          <div style="font-size:13px;font-weight:700;margin-top:4px">${formatNum(sumThis)} из ${formatNum(budget)} ${cur}</div>
+        </div>
+        <div style="font-size:20px;font-weight:800;color:${budgetColor}">${budgetPct}%</div>
+      </div>
+      <div class="sw-bar-wrap">
+        <div class="sw-bar-fill" style="width:${budgetPct}%;background:${budgetColor}"></div>
+      </div>
+    </div>` : ''}
+  `;
 }
 
 // ==============================
