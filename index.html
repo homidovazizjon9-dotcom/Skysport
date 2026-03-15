@@ -1639,9 +1639,10 @@ function setDateToday() {
 }
 
 function loadSettings() {
-  document.getElementById('initialBalance').value = settings.initialBalance || '';
-  document.getElementById('monthBudget').value = settings.monthBudget || '';
-  document.getElementById('scriptUrl').value = settings.scriptUrl || '';
+  const ib = document.getElementById('initialBalance');
+  const mb = document.getElementById('monthBudget');
+  if (ib) ib.value = settings.initialBalance || '';
+  if (mb) mb.value = settings.monthBudget || '';
   updateCurrencyUI();
   if (currentUser) {
     const el = document.getElementById('settingsName');
@@ -1654,9 +1655,10 @@ function loadSettings() {
 }
 
 function saveSettings() {
-  settings.initialBalance = parseFloat(document.getElementById('initialBalance').value) || 0;
-  settings.monthBudget = parseFloat(document.getElementById('monthBudget').value) || 0;
-  settings.scriptUrl = document.getElementById('scriptUrl').value || '';
+  const ib = document.getElementById('initialBalance');
+  const mb = document.getElementById('monthBudget');
+  settings.initialBalance = parseFloat(ib ? ib.value : 0) || 0;
+  settings.monthBudget = parseFloat(mb ? mb.value : 0) || 0;
   saveSettingsToFirestore();
   refreshAll();
 }
