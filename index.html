@@ -398,41 +398,95 @@
   /* ====== LOGIN SCREEN ====== */
   .login-screen {
     position:fixed; inset:0; z-index:1000;
-    background:var(--bg);
+    background: linear-gradient(135deg, #0a0a0f 0%, #0f0a1e 40%, #0a0f1a 100%);
     display:flex; flex-direction:column;
     align-items:center; justify-content:center;
-    padding:40px 30px;
+    padding:40px 30px; overflow:hidden;
   }
-  .login-logo { font-size:64px; margin-bottom:16px; }
+
+  /* Floating coins */
+  .coin {
+    position:absolute; font-size:24px; pointer-events:none;
+    animation: floatCoin linear infinite;
+    opacity:0;
+  }
+  @keyframes floatCoin {
+    0%   { transform:translateY(110vh) rotate(0deg);   opacity:0; }
+    5%   { opacity:0.8; }
+    90%  { opacity:0.6; }
+    100% { transform:translateY(-10vh) rotate(720deg); opacity:0; }
+  }
+
+  /* Glow orbs */
+  .login-orb {
+    position:absolute; border-radius:50%; filter:blur(80px); pointer-events:none;
+    animation: orbPulse 4s ease-in-out infinite alternate;
+  }
+  @keyframes orbPulse { from { transform:scale(1); opacity:0.3; } to { transform:scale(1.2); opacity:0.6; } }
+
+  .login-card {
+    position:relative; z-index:2;
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:28px; padding:36px 28px;
+    width:100%; max-width:360px;
+    backdrop-filter:blur(20px);
+    box-shadow:0 24px 80px rgba(0,0,0,0.5);
+    animation: cardIn 0.8s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  @keyframes cardIn { from { opacity:0; transform:translateY(40px) scale(0.95); } }
+
+  .login-logo-wrap {
+    text-align:center; margin-bottom:20px;
+    animation: logoIn 1s cubic-bezier(0.34,1.56,0.64,1) 0.2s both;
+  }
+  @keyframes logoIn { from { opacity:0; transform:scale(0.5) rotate(-20deg); } }
+
+  .login-logo-circle {
+    width:80px; height:80px; border-radius:24px; margin:0 auto 12px;
+    background:linear-gradient(135deg, #7c6dfa, #fa6d8f);
+    display:flex; align-items:center; justify-content:center;
+    font-size:40px;
+    box-shadow:0 8px 32px rgba(124,109,250,0.5);
+    animation: logoBob 3s ease-in-out infinite;
+  }
+  @keyframes logoBob { 0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-8px) rotate(3deg)} }
+
   .login-title {
-    font-family:'Unbounded',sans-serif; font-size:22px;
-    font-weight:800; margin-bottom:8px; text-align:center;
+    font-family:'Unbounded',sans-serif; font-size:20px;
+    font-weight:800; margin-bottom:4px; text-align:center; color:#fff;
   }
   .login-sub {
-    font-size:14px; color:var(--text2); text-align:center;
-    margin-bottom:40px; line-height:1.5;
+    font-size:13px; color:rgba(255,255,255,0.5); text-align:center;
+    margin-bottom:28px; line-height:1.5;
   }
   .login-btn {
     display:flex; align-items:center; gap:12px;
-    padding:16px 28px; border-radius:16px;
+    padding:15px 24px; border-radius:14px;
     background:white; color:#1a1a1a;
     border:none; cursor:pointer; font-size:15px; font-weight:700;
-    box-shadow:0 4px 20px rgba(0,0,0,0.3);
+    box-shadow:0 4px 20px rgba(0,0,0,0.4);
     transition:all 0.2s; width:100%; justify-content:center;
+    animation: btnIn 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.5s both;
   }
-  .login-btn:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(0,0,0,0.4); }
+  @keyframes btnIn { from { opacity:0; transform:translateY(20px); } }
+  .login-btn:hover { transform:translateY(-2px); box-shadow:0 8px 32px rgba(124,109,250,0.4); }
   .login-btn:active { transform:scale(0.97); }
   .login-btn img { width:22px; height:22px; }
-  .login-loading { font-size:13px; color:var(--text2); margin-top:16px; }
+  .login-loading { font-size:13px; color:rgba(255,255,255,0.5); margin-top:14px; text-align:center; }
+
   .login-features {
     display:flex; flex-direction:column; gap:10px;
-    margin-bottom:36px; width:100%;
+    margin-bottom:24px;
+    animation: featIn 0.8s 0.35s both;
   }
+  @keyframes featIn { from { opacity:0; transform:translateX(-16px); } }
   .login-feature {
     display:flex; align-items:center; gap:12px;
-    font-size:13px; color:var(--text2);
+    font-size:13px; color:rgba(255,255,255,0.6);
+    background:rgba(255,255,255,0.04); border-radius:10px; padding:10px 12px;
   }
-  .login-feature span:first-child { font-size:20px; }
+  .login-feature span:first-child { font-size:18px; }
 
   /* User avatar in header */
   .user-avatar {
@@ -880,8 +934,8 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch }
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getDatabase, ref, set, get, child }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBeiC9-NpXiHMoDACAsCwVd-mZsx-f2xVI",
@@ -889,31 +943,26 @@
     projectId: "spenses-f8c91",
     storageBucket: "spenses-f8c91.firebasestorage.app",
     messagingSenderId: "609345629874",
-    appId: "1:609345629874:web:37a5acb549a651d4b923ab"
+    appId: "1:609345629874:web:37a5acb549a651d4b923ab",
+    databaseURL: "https://spenses-f8c91-default-rtdb.firebaseio.com"
   };
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = getFirestore(app);
+  const db = getDatabase(app);
   const provider = new GoogleAuthProvider();
 
-  // Expose to global scope for non-module script
   window._fbAuth = auth;
   window._fbDb = db;
   window._fbProvider = provider;
   window._fbSignIn = () => signInWithPopup(auth, provider);
   window._fbSignOut = () => signOut(auth);
-  window._fbOnAuth = (cb) => onAuthStateChanged(auth, cb);
-  window._fbDoc = doc;
-  window._fbSetDoc = setDoc;
-  window._fbGetDoc = getDoc;
-  window._fbCollection = collection;
-  window._fbGetDocs = getDocs;
-  window._fbDeleteDoc = deleteDoc;
-  window._fbWriteBatch = writeBatch;
+  window._fbRef = ref;
+  window._fbSet = set;
+  window._fbGet = get;
+  window._fbChild = child;
   window._firebaseReady = true;
 
-  // Trigger auth state listener once firebase is ready
   onAuthStateChanged(auth, (user) => {
     if (window._onAuthReady) window._onAuthReady(user);
   });
@@ -924,19 +973,34 @@
 
 <!-- LOGIN SCREEN -->
 <div class="login-screen" id="loginScreen">
-  <div class="login-logo">💸</div>
-  <div class="login-title">Мои расходы</div>
-  <div class="login-sub">Личный трекер расходов.<br>Данные хранятся в облаке — только у тебя.</div>
-  <div class="login-features">
-    <div class="login-feature"><span>🔒</span><span>Только ты видишь свои данные</span></div>
-    <div class="login-feature"><span>☁️</span><span>Синхронизация на всех устройствах</span></div>
-    <div class="login-feature"><span>🚀</span><span>Вход одним нажатием</span></div>
+  <!-- Glow orbs -->
+  <div class="login-orb" style="width:300px;height:300px;background:#7c6dfa;top:-80px;left:-80px;animation-delay:0s"></div>
+  <div class="login-orb" style="width:250px;height:250px;background:#fa6d8f;bottom:-60px;right:-60px;animation-delay:2s"></div>
+  <div class="login-orb" style="width:150px;height:150px;background:#6dfad6;top:40%;left:60%;animation-delay:1s"></div>
+
+  <!-- Floating coins container (filled by JS) -->
+  <div id="coinsContainer"></div>
+
+  <!-- Card -->
+  <div class="login-card">
+    <div class="login-logo-wrap">
+      <div class="login-logo-circle">💸</div>
+      <div class="login-title">Мои расходы</div>
+      <div class="login-sub">Личный трекер — данные только у тебя</div>
+    </div>
+
+    <div class="login-features">
+      <div class="login-feature"><span>🔒</span><span>Только ты видишь свои данные</span></div>
+      <div class="login-feature"><span>☁️</span><span>Синхронизация на всех устройствах</span></div>
+      <div class="login-feature"><span>⚡</span><span>Вход одним нажатием через Google</span></div>
+    </div>
+
+    <button class="login-btn" onclick="handleSignIn()">
+      <img src="https://www.google.com/favicon.ico" alt="G">
+      Войти через Google
+    </button>
+    <div class="login-loading" id="loginLoading" style="display:none">⏳ Входим в аккаунт...</div>
   </div>
-  <button class="login-btn" onclick="handleSignIn()">
-    <img src="https://www.google.com/favicon.ico" alt="G">
-    Войти через Google
-  </button>
-  <div class="login-loading" id="loginLoading" style="display:none">⏳ Входим...</div>
 </div>
 
 
@@ -1456,9 +1520,8 @@ window._onAuthReady = async (user) => {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
 
-    // Load user data from Firestore
     showToast('Загружаем ваши данные...', 'success');
-    await loadFromFirestore();
+    await loadFromDB();
 
     // Init app
     initApp();
@@ -1490,6 +1553,7 @@ function initApp() {
 }
 
 function init() {
+  spawnCoins();
   // Just show login screen initially — Firebase module will call _onAuthReady
   // If Firebase not ready yet after 3s, allow offline mode
   setTimeout(() => {
@@ -2825,80 +2889,64 @@ function showToast(msg, type = 'success') {
 }
 
 // ==============================
-// FIREBASE DATA LAYER
+// FIREBASE REALTIME DATABASE LAYER
 // ==============================
 let currentUser = null;
 
-function getUserRef(sub) {
-  return window._fbDoc(window._fbDb, 'users', currentUser.uid, sub, 'main');
+function userPath(sub) {
+  return `users/${currentUser.uid}/${sub}`;
 }
 
 async function saveData() {
-  // Always save to localStorage as cache
   localStorage.setItem('expenses_data', JSON.stringify(data));
-  // Save to Firestore if logged in
-  if (currentUser && window._fbSetDoc) {
+  if (currentUser && window._fbSet) {
     try {
-      await window._fbSetDoc(
-        window._fbDoc(window._fbDb, 'users', currentUser.uid, 'data', 'transactions'),
-        { transactions: data.transactions },
-        { merge: false }
-      );
-    } catch(e) { console.warn('Firestore save error:', e); }
+      await window._fbSet(window._fbRef(window._fbDb, userPath('transactions')), data.transactions || []);
+    } catch(e) { console.warn('RTDB save error:', e); }
   }
 }
 
-async function loadFromFirestore() {
-  if (!currentUser || !window._fbGetDoc) return;
+async function loadFromDB() {
+  if (!currentUser || !window._fbGet) return;
   try {
-    const docSnap = await window._fbGetDoc(
-      window._fbDoc(window._fbDb, 'users', currentUser.uid, 'data', 'transactions')
-    );
-    if (docSnap.exists()) {
-      data = docSnap.data();
+    const dbRef = window._fbRef(window._fbDb);
+    // Load transactions
+    const txSnap = await window._fbGet(window._fbChild(dbRef, userPath('transactions')));
+    if (txSnap.exists()) {
+      data.transactions = txSnap.val() || [];
       localStorage.setItem('expenses_data', JSON.stringify(data));
     }
-    // Also load goals
-    const goalsSnap = await window._fbGetDoc(
-      window._fbDoc(window._fbDb, 'users', currentUser.uid, 'data', 'goals')
-    );
+    // Load goals
+    const goalsSnap = await window._fbGet(window._fbChild(dbRef, userPath('goals')));
     if (goalsSnap.exists()) {
-      goalsData = goalsSnap.data().goals || [];
+      goalsData = goalsSnap.val() || [];
       localStorage.setItem('goals_data', JSON.stringify(goalsData));
     }
     // Load settings
-    const settingsSnap = await window._fbGetDoc(
-      window._fbDoc(window._fbDb, 'users', currentUser.uid, 'data', 'settings')
-    );
-    if (settingsSnap.exists()) {
-      const fs = settingsSnap.data();
-      settings = { ...settings, ...fs };
+    const settSnap = await window._fbGet(window._fbChild(dbRef, userPath('settings')));
+    if (settSnap.exists()) {
+      const s = settSnap.val();
+      settings = { ...settings, ...s };
       localStorage.setItem('expenses_settings', JSON.stringify(settings));
     }
-  } catch(e) { console.warn('Firestore load error:', e); }
+  } catch(e) { console.warn('RTDB load error:', e); }
 }
 
 async function saveGoalsToFirestore() {
   localStorage.setItem('goals_data', JSON.stringify(goalsData));
-  if (currentUser && window._fbSetDoc) {
+  if (currentUser && window._fbSet) {
     try {
-      await window._fbSetDoc(
-        window._fbDoc(window._fbDb, 'users', currentUser.uid, 'data', 'goals'),
-        { goals: goalsData }
-      );
-    } catch(e) { console.warn('Goals save error:', e); }
+      await window._fbSet(window._fbRef(window._fbDb, userPath('goals')), goalsData || []);
+    } catch(e) { console.warn('RTDB goals save error:', e); }
   }
 }
 
 async function saveSettingsToFirestore() {
   localStorage.setItem('expenses_settings', JSON.stringify(settings));
-  if (currentUser && window._fbSetDoc) {
+  if (currentUser && window._fbSet) {
     try {
-      await window._fbSetDoc(
-        window._fbDoc(window._fbDb, 'users', currentUser.uid, 'data', 'settings'),
-        settings
-      );
-    } catch(e) { console.warn('Settings save error:', e); }
+      await window._fbSet(window._fbRef(window._fbDb, userPath('settings')), settings);
+    } catch(e) { console.warn('RTDB settings save error:', e); }
   }
 }
 
@@ -3086,6 +3134,29 @@ function selectCurrency(code, symbol, display) {
 
 function showCurrencyModal() {
   document.getElementById('currencyModal').style.display = 'flex';
+}
+
+
+// ==============================
+// FLOATING COINS ANIMATION
+// ==============================
+function spawnCoins() {
+  const container = document.getElementById('coinsContainer');
+  if (!container) return;
+  const symbols = ['💰','💵','💴','💶','💷','🪙','💎','✨','💸'];
+  const count = 18;
+  container.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.className = 'coin';
+    el.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+    const left = Math.random() * 100;
+    const duration = 4 + Math.random() * 8;
+    const delay = Math.random() * 8;
+    const size = 16 + Math.random() * 20;
+    el.style.cssText = `left:${left}%;font-size:${size}px;animation-duration:${duration}s;animation-delay:${delay}s`;
+    container.appendChild(el);
+  }
 }
 
 // ==============================
