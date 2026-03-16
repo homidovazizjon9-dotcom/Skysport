@@ -596,6 +596,26 @@
   .sw-bar-wrap { height:4px; background:var(--surface3); border-radius:2px; margin-top:6px; overflow:hidden; }
   .sw-bar-fill { height:100%; border-radius:2px; transition:width 1s cubic-bezier(0.34,1.56,0.64,1); }
 
+
+  /* ====== AI CARD ====== */
+  .ai-card {
+    background:linear-gradient(135deg,rgba(124,109,250,0.1),rgba(250,109,143,0.08));
+    border:1px solid rgba(124,109,250,0.3);
+    border-radius:var(--radius); padding:16px;
+  }
+  .ai-header { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .ai-icon { font-size:18px; }
+  .ai-title { font-size:13px; font-weight:700; color:var(--accent); }
+  .ai-text { font-size:13px; color:var(--text2); line-height:1.6; }
+  .ai-loading { display:flex; gap:6px; }
+  .ai-dot {
+    width:7px; height:7px; border-radius:50%; background:var(--accent);
+    animation: aiPulse 1.2s ease-in-out infinite;
+  }
+  .ai-dot:nth-child(2) { animation-delay:0.2s; }
+  .ai-dot:nth-child(3) { animation-delay:0.4s; }
+  @keyframes aiPulse { 0%,100%{opacity:0.2;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.1)} }
+
   /* ====== GOALS ====== */
   .goals-section { padding:0 20px; animation:fadeUp 0.5s 0.2s both; }
 
@@ -1150,6 +1170,18 @@
     <!-- Smart Analytics Widget -->
     <div style="padding:0 20px 16px">
       <div id="smartWidget" class="smart-widget"></div>
+    </div>
+
+    <!-- Gemini AI Card -->
+    <div id="aiCard" style="margin:0 20px 16px">
+      <div class="ai-card">
+        <div class="ai-header">
+          <span class="ai-icon">🤖</span>
+          <span class="ai-title">ИИ-анализ</span>
+          <button onclick="loadAiInsights()" style="margin-left:auto;background:rgba(124,109,250,0.15);border:1px solid var(--accent);color:var(--accent);padding:4px 10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer">Обновить</button>
+        </div>
+        <div class="ai-text" id="aiText">Нажмите "Обновить" для анализа</div>
+      </div>
     </div>
 
     <!-- Recent -->
@@ -3206,6 +3238,99 @@ function renderSmartWidget() {
       </div>
     </div>` : ''}
   `;
+}
+
+
+// ==============================
+// GROQ AI
+// ==============================
+
+// Shared key stored in Firebase at /config/groqKey (set by admin)
+let _groqKey = null;
+
+async function getGroqKey() {
+  if (_groqKey) return _groqKey;
+  if (!window._fbGet || !window._fbRef) return null;
+  try {
+    const snap = await window._fbGet(window._fbRef(window._fbDb, 'config/groqKey'));
+    if (snap.exists()) {
+      _groqKey = snap.val();
+      return _groqKey;
+    }
+  } catch(e) { console.warn('Could not load Groq key:', e); }
+  return null;
+}
+
+async function callGroq(prompt) {
+  const key = await getGroqKey();
+  if (!key) throw new Error('ИИ не настроен');
+  // Each call is completely fresh — no history
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + key,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        { role: 'system', content: 'Ты финансовый помощник. Отвечай кратко, по-русски, без markdown.' },
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 400,
+      temperature: 0.7
+    })
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error.message);
+  return json.choices?.[0]?.message?.content || '';
+}
+
+async function loadAiInsights() {
+  const el = document.getElementById('aiText');
+  if (!el) return;
+  if (data.transactions.length < 3) {
+    el.textContent = 'Добавь больше записей для анализа 📊';
+    return;
+  }
+
+  el.innerHTML = '<div class="ai-loading"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>';
+
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const prevMonth = (() => {
+    const d = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  })();
+
+  const txThis = data.transactions.filter(t => t.date.startsWith(thisMonth) && t.type === 'expense');
+  const txPrev = data.transactions.filter(t => t.date.startsWith(prevMonth) && t.type === 'expense');
+  const sumThis = txThis.reduce((s,t) => s+t.amount, 0);
+  const sumPrev = txPrev.reduce((s,t) => s+t.amount, 0);
+
+  const byCat = {};
+  txThis.forEach(t => { byCat[t.category] = (byCat[t.category]||0) + t.amount; });
+  const topCats = Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,3)
+    .map(([id,v]) => `${CATS.find(c=>c.id===id)?.label||id}: ${formatNum(v)} ${CUR()}`).join(', ');
+
+  const today = now.toISOString().split('T')[0];
+  const todaySum = data.transactions.filter(t=>t.date===today&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
+
+  const prompt = `Ты финансовый помощник. Дай краткий анализ (2-3 предложения, без markdown, на русском) расходов:
+- Этот месяц: ${formatNum(sumThis)} ${CUR()}
+- Прошлый месяц: ${formatNum(sumPrev)} ${CUR()}
+- Топ категории: ${topCats || 'нет данных'}
+- Сегодня: ${formatNum(todaySum)} ${CUR()}
+- Всего записей: ${data.transactions.length}
+${settings.monthBudget ? `- Бюджет: ${formatNum(settings.monthBudget)} ${CUR()}` : ''}
+Дай конкретный совет. Будь дружелюбным и кратким.`;
+
+  try {
+    const text = await callGroq(prompt);
+    el.textContent = text || 'Нет ответа от Gemini';
+  } catch(e) {
+    el.textContent = 'Ошибка: ' + e.message;
+  }
 }
 
 // ==============================
