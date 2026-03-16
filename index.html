@@ -1644,6 +1644,11 @@ window._onAuthReady = async (user) => {
 };
 
 function initApp() {
+  // Reset AI text for new user session
+  const aiEl = document.getElementById('aiText');
+  if (aiEl) aiEl.textContent = 'Нажмите "Обновить" для анализа';
+  // Reset Groq key cache so new user gets fresh key
+  _groqKey = null;
   renderCatGrid();
   renderSourceGrid();
   renderFilterRow();
