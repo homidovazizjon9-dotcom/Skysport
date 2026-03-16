@@ -3305,29 +3305,60 @@ async function loadAiInsights() {
 
   const txThis = data.transactions.filter(t => t.date.startsWith(thisMonth) && t.type === 'expense');
   const txPrev = data.transactions.filter(t => t.date.startsWith(prevMonth) && t.type === 'expense');
+  const incThis = data.transactions.filter(t => t.date.startsWith(thisMonth) && t.type === 'income');
   const sumThis = txThis.reduce((s,t) => s+t.amount, 0);
   const sumPrev = txPrev.reduce((s,t) => s+t.amount, 0);
+  const incSumThis = incThis.reduce((s,t) => s+t.amount, 0);
 
+  // All categories this month
   const byCat = {};
   txThis.forEach(t => { byCat[t.category] = (byCat[t.category]||0) + t.amount; });
-  const topCats = Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,3)
-    .map(([id,v]) => `${CATS.find(c=>c.id===id)?.label||id}: ${formatNum(v)} ${CUR()}`).join(', ');
+  const allCats = Object.entries(byCat)
+    .sort((a,b) => b[1]-a[1])
+    .map(([id,v]) => {
+      const cat = CATS.find(c => c.id === id);
+      const pct = sumThis > 0 ? Math.round(v/sumThis*100) : 0;
+      return `${cat?.label||id}: ${formatNum(v)} ${CUR()} (${pct}%)`;
+    }).join('\n');
+
+  // Day of month and daily average
+  const dayOfMonth = now.getDate();
+  const avgDaily = dayOfMonth > 0 ? Math.round(sumThis / dayOfMonth) : 0;
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const projected = avgDaily * daysInMonth;
+
+  // Month change
+  const momChange = sumPrev > 0 ? Math.round((sumThis - sumPrev) / sumPrev * 100) : null;
+  const momText = momChange !== null ? `${momChange > 0 ? '+' : ''}${momChange}%` : 'нет данных';
+
+  // Top single expense
+  const topTx = [...txThis].sort((a,b) => b.amount - a.amount)[0];
 
   const today = now.toISOString().split('T')[0];
   const todaySum = data.transactions.filter(t=>t.date===today&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
 
-  const prompt = `Ты финансовый помощник. Дай краткий анализ (2-3 предложения, без markdown, на русском) расходов:
-- Этот месяц: ${formatNum(sumThis)} ${CUR()}
-- Прошлый месяц: ${formatNum(sumPrev)} ${CUR()}
-- Топ категории: ${topCats || 'нет данных'}
-- Сегодня: ${formatNum(todaySum)} ${CUR()}
-- Всего записей: ${data.transactions.length}
-${settings.monthBudget ? `- Бюджет: ${formatNum(settings.monthBudget)} ${CUR()}` : ''}
-Дай конкретный совет. Будь дружелюбным и кратким.`;
+  const cur = CUR();
+  const prompt = `Ты личный финансовый аналитик. Проанализируй расходы пользователя и дай 3-4 предложения с конкретными цифрами и советом. Без markdown, без звёздочек, на русском языке.
+
+ДАННЫЕ ЗА ТЕКУЩИЙ МЕСЯЦ:
+- Расходы: ${formatNum(sumThis)} ${cur} (${momText} к прошлому месяцу)
+- Доходы: ${formatNum(incSumThis)} ${cur}
+- Прошлый месяц расходы: ${formatNum(sumPrev)} ${cur}
+- Сегодня потрачено: ${formatNum(todaySum)} ${cur}
+- Среднее в день: ${formatNum(avgDaily)} ${cur}
+- Прогноз на конец месяца: ${formatNum(projected)} ${cur}
+${settings.monthBudget ? `- Бюджет: ${formatNum(settings.monthBudget)} ${cur} (использовано ${Math.round(sumThis/settings.monthBudget*100)}%)` : ''}
+- День месяца: ${dayOfMonth} из ${daysInMonth}
+
+РАСХОДЫ ПО КАТЕГОРИЯМ:
+${allCats || 'нет данных'}
+${topTx ? `\nСамая крупная трата: ${topTx.name} — ${formatNum(topTx.amount)} ${cur}` : ''}
+
+Напиши живой, дружелюбный анализ с конкретными цифрами из данных выше. Укажи что хорошо и что можно улучшить.`;
 
   try {
     const text = await callGroq(prompt);
-    el.textContent = text || 'Нет ответа от Gemini';
+    el.textContent = text || 'Нет ответа';
   } catch(e) {
     el.textContent = 'Ошибка: ' + e.message;
   }
