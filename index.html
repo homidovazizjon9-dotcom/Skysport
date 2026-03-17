@@ -1135,6 +1135,7 @@
       <div class="header-sub" id="headerDate"></div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
+      <button id="themeToggleBtn" onclick="toggleTheme()" style="width:34px;height:34px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.2s">🌙</button>
       <img class="user-avatar" id="userAvatar" src="" alt="" onclick="toggleUserMenu()" style="display:none">
     </div>
   </div>
@@ -1145,6 +1146,7 @@
     <button class="tab" onclick="showTab('add',this)">+ Добавить</button>
     <button class="tab" onclick="showTab('analytics',this)">Аналитика</button>
     <button class="tab" onclick="showTab('history',this)">История</button>
+    <button class="tab" onclick="showTab('ai',this)">🤖</button>
     <button class="tab" onclick="showTab('goals',this)">🎯</button>
     <button class="tab" onclick="showTab('settings',this)">⚙️</button>
   </div>
@@ -1326,17 +1328,7 @@
         <div class="compare-totals" id="compareTotals"></div>
       </div>
 
-      <!-- AI Analysis -->
-      <div id="aiCard" style="margin:0 0 20px">
-        <div class="ai-card">
-          <div class="ai-header">
-            <span class="ai-icon">🤖</span>
-            <span class="ai-title">ИИ-анализ расходов</span>
-            <button onclick="loadAiInsights()" style="margin-left:auto;background:rgba(124,109,250,0.15);border:1px solid var(--accent);color:var(--accent);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">✨ Анализировать</button>
-          </div>
-          <div class="ai-text" id="aiText">Нажмите "Анализировать" чтобы получить персональный анализ ваших расходов</div>
-        </div>
-      </div>
+
 
     </div>
   </div>
@@ -1425,6 +1417,51 @@
           <button class="copy-btn" style="width:auto;padding:8px 16px;color:var(--accent2);border-color:var(--accent2)" onclick="clearData()">Очистить</button>
         </div>
       </div>
+
+    </div>
+  </div>
+
+  <!-- ======= AI ======= -->
+  <div id="tab-ai" class="tab-content">
+    <div style="padding:20px">
+
+      <!-- Header card -->
+      <div style="background:linear-gradient(135deg,rgba(124,109,250,0.15),rgba(250,109,143,0.08));border:1px solid rgba(124,109,250,0.3);border-radius:var(--radius);padding:20px;margin-bottom:16px;border-top:3px solid var(--accent)">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div style="font-size:32px">🤖</div>
+          <div>
+            <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:800">ИИ-анализ</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">Персональный финансовый советник</div>
+          </div>
+        </div>
+        <p style="font-size:13px;color:var(--text2);line-height:1.5;margin:0">
+          Анализирует твои расходы, находит паттерны и даёт конкретные советы на основе реальных цифр.
+        </p>
+      </div>
+
+      <!-- Analysis result -->
+      <div class="ai-card" id="aiResultCard">
+        <div class="ai-header">
+          <span class="ai-icon">✨</span>
+          <span class="ai-title">Анализ расходов</span>
+          <span id="aiLoadTime" style="margin-left:auto;font-size:11px;color:var(--text2)"></span>
+        </div>
+        <div class="ai-text" id="aiText">Нажмите кнопку ниже чтобы получить персональный анализ</div>
+      </div>
+
+      <!-- Action button -->
+      <button onclick="loadAiInsights()" id="aiAnalyzeBtn"
+        style="width:100%;padding:16px;border-radius:var(--radius);
+               background:linear-gradient(135deg,var(--accent),var(--accent2));
+               border:none;color:#fff;font-size:15px;font-weight:700;
+               cursor:pointer;margin-top:12px;
+               box-shadow:0 4px 20px rgba(124,109,250,0.4);
+               transition:all 0.2s;font-family:'Unbounded',sans-serif">
+        🔍 Анализировать расходы
+      </button>
+
+      <!-- Stats summary -->
+      <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="aiStatsSummary"></div>
 
     </div>
   </div>
@@ -1689,6 +1726,7 @@ function initApp() {
   setHeaderDate();
   updateGreeting();
   updateCurrencyUI();
+  applyTheme();
 
   // Currency check happens after Firebase load in _onAuthReady
 }
@@ -1767,6 +1805,7 @@ function showTab(name, el) {
   if (name === 'history') renderHistory();
   if (name === 'home') renderHome();
   if (name === 'goals') renderGoals();
+  if (name === 'ai') renderAiTab();
 }
 
 // ==============================
@@ -3277,6 +3316,25 @@ function renderSmartWidget() {
 }
 
 
+
+// ==============================
+// THEME
+// ==============================
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = isLight ? '☀️' : '🌙';
+  settings.theme = isLight ? 'light' : 'dark';
+  saveSettingsToFirestore();
+}
+
+function applyTheme() {
+  const isLight = settings.theme === 'light';
+  document.body.classList.toggle('light', isLight);
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = isLight ? '☀️' : '🌙';
+}
+
 // ==============================
 // GROQ AI
 // ==============================
@@ -3322,6 +3380,31 @@ async function callGroq(prompt) {
   return json.choices?.[0]?.message?.content || '';
 }
 
+function renderAiTab() {
+  // Render mini stats on AI tab
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const txThis = data.transactions.filter(t => t.date.startsWith(thisMonth) && t.type === 'expense');
+  const sumThis = txThis.reduce((s,t) => s+t.amount, 0);
+  const incThis = data.transactions.filter(t => t.date.startsWith(thisMonth) && t.type === 'income').reduce((s,t) => s+t.amount, 0);
+  const total = data.transactions.length;
+  const cur = CUR();
+
+  const el = document.getElementById('aiStatsSummary');
+  if (!el) return;
+  el.innerHTML = [
+    { icon:'💸', label:'Расходы', val: formatNum(sumThis) + ' ' + cur },
+    { icon:'💰', label:'Доходы',  val: formatNum(incThis) + ' ' + cur },
+    { icon:'📝', label:'Записей', val: total }
+  ].map(s => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center">
+      <div style="font-size:20px">${s.icon}</div>
+      <div style="font-size:10px;color:var(--text2);margin-top:4px;text-transform:uppercase;letter-spacing:0.5px">${s.label}</div>
+      <div style="font-size:13px;font-weight:700;margin-top:2px">${s.val}</div>
+    </div>
+  `).join('');
+}
+
 async function loadAiInsights() {
   const el = document.getElementById('aiText');
   if (!el) return;
@@ -3330,6 +3413,9 @@ async function loadAiInsights() {
     return;
   }
 
+  const btn = document.getElementById('aiAnalyzeBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Анализирую...'; }
+  const t0 = Date.now();
   el.innerHTML = '<div class="ai-loading"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>';
 
   const now = new Date();
@@ -3395,8 +3481,13 @@ ${topTx ? `\nСамая крупная трата: ${topTx.name} — ${formatNum
   try {
     const text = await callGroq(prompt);
     el.textContent = text || 'Нет ответа';
+    const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+    const timeEl = document.getElementById('aiLoadTime');
+    if (timeEl) timeEl.textContent = elapsed + 'с';
   } catch(e) {
     el.textContent = 'Ошибка: ' + e.message;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔍 Анализировать расходы'; }
   }
 }
 
