@@ -33,6 +33,39 @@
     --radius-sm: 12px;
   }
 
+  /* ====== LIGHT THEME ====== */
+  body.light {
+    --bg: #f0f0f8;
+    --surface: #ffffff;
+    --surface2: #e8e8f4;
+    --surface3: #dcdcec;
+    --accent: #6c5ce7;
+    --accent2: #e84393;
+    --accent3: #00b894;
+    --accent4: #fdcb6e;
+    --text: #1a1a2e;
+    --text2: #666680;
+    --border: rgba(108,92,231,0.15);
+    --glow: 0 0 40px rgba(108,92,231,0.12);
+  }
+  body.light .balance-card {
+    background: linear-gradient(135deg, rgba(108,92,231,0.1) 0%, rgba(232,67,147,0.06) 100%);
+  }
+  body.light .login-screen {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  }
+  body.light .header {
+    background: rgba(240,240,248,0.9);
+    border-bottom-color: rgba(108,92,231,0.15);
+  }
+  body.light .bottom-nav {
+    background: rgba(240,240,248,0.95);
+    border-top-color: rgba(108,92,231,0.15);
+  }
+  body.light .tabs {
+    background: transparent;
+  }
+
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
   body {
@@ -1170,18 +1203,6 @@
     <!-- Smart Analytics Widget -->
     <div style="padding:0 20px 16px">
       <div id="smartWidget" class="smart-widget"></div>
-    </div>
-
-    <!-- Gemini AI Card -->
-    <div id="aiCard" style="margin:0 20px 16px">
-      <div class="ai-card">
-        <div class="ai-header">
-          <span class="ai-icon">🤖</span>
-          <span class="ai-title">ИИ-анализ</span>
-          <button onclick="loadAiInsights()" style="margin-left:auto;background:rgba(124,109,250,0.15);border:1px solid var(--accent);color:var(--accent);padding:4px 10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer">Обновить</button>
-        </div>
-        <div class="ai-text" id="aiText">Нажмите "Обновить" для анализа</div>
-      </div>
     </div>
 
     <!-- Recent -->
@@ -3320,20 +3341,33 @@ let _groqKey = null;
 
 async function getGroqKey() {
   if (_groqKey) return _groqKey;
-  if (!window._fbGet || !window._fbRef) return null;
+  // Wait for Firebase to be ready
+  for (let i = 0; i < 20; i++) {
+    if (window._fbGet && window._fbRef && window._fbDb) break;
+    await new Promise(r => setTimeout(r, 200));
+  }
+  if (!window._fbGet || !window._fbRef || !window._fbDb) {
+    console.warn('Firebase not ready for Groq key fetch');
+    return null;
+  }
   try {
     const snap = await window._fbGet(window._fbRef(window._fbDb, 'config/groqKey'));
-    if (snap.exists()) {
+    if (snap.exists() && snap.val()) {
       _groqKey = snap.val();
+      console.log('✅ Groq key loaded');
       return _groqKey;
+    } else {
+      console.warn('Groq key not found at config/groqKey in Firebase');
     }
-  } catch(e) { console.warn('Could not load Groq key:', e); }
+  } catch(e) {
+    console.error('Groq key error:', e.code, e.message);
+  }
   return null;
 }
 
 async function callGroq(prompt) {
   const key = await getGroqKey();
-  if (!key) throw new Error('ИИ не настроен');
+  if (!key) throw new Error('Groq ключ не найден. Проверь Firebase: config/groqKey');
   // Each call is completely fresh — no history
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
