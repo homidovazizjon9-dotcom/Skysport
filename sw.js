@@ -1,54 +1,43 @@
-// Bump this version on EVERY deploy — it forces cache invalidation
-const CACHE_NAME = 'rashody-v202603151914';
+const CACHE_NAME = 'rashody-v20260317';
 
-// Listen for SKIP_WAITING message from the page
 self.addEventListener('message', e => {
   if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-// Install — pre-cache shell
 self.addEventListener('install', e => {
-  self.skipWaiting(); // activate immediately, don't wait
+  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache =>
-      cache.addAll(['./', './index.html', './manifest.json'])
-        .catch(() => {}) // don't fail install if some asset is missing
+      cache.addAll(['./', './index.html', './manifest.json']).catch(() => {})
     )
   );
 });
 
-// Activate — delete ALL other caches immediately
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim()) // take control of all open tabs
+    ).then(() => self.clients.claim())
   );
 });
 
-// Fetch strategy:
-// - Google APIs / fonts → always network
-// - HTML pages → network-first (updates apply immediately), fallback to cache
-// - Everything else → cache-first (fast), update cache in background
 self.addEventListener('fetch', e => {
+  // Skip non-GET requests — POST/PUT cannot be cached
+  if (e.request.method !== 'GET') return;
+
   const url = new URL(e.request.url);
 
   // Always network for external APIs
-  if (url.hostname.includes('google') ||
-      url.hostname.includes('fonts') ||
-      url.hostname.includes('anthropic')) {
-    e.respondWith(
-      fetch(e.request).catch(() => new Response('', { status: 503 }))
-    );
-    return;
+  if (url.hostname.includes('firebase') ||
+      url.hostname.includes('googleapis') ||
+      url.hostname.includes('groq') ||
+      url.hostname.includes('anthropic') ||
+      url.hostname.includes('fonts')) {
+    return; // let browser handle normally
   }
 
-  // Network-first for HTML — always get fresh version
-  if (e.request.mode === 'navigate' ||
-      e.request.destination === 'document' ||
-      url.pathname.endsWith('.html') ||
-      url.pathname === '/' ||
-      url.pathname.endsWith('/')) {
+  // Network-first for HTML
+  if (e.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname === '/') {
     e.respondWith(
       fetch(e.request)
         .then(res => {
@@ -61,17 +50,14 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Cache-first for static assets (icons, manifest)
+  // Cache-first for static assets
   e.respondWith(
     caches.match(e.request).then(cached => {
-      const fetchPromise = fetch(e.request).then(res => {
-        if (res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-        }
+      const net = fetch(e.request).then(res => {
+        if (res.ok) caches.open(CACHE_NAME).then(c => c.put(e.request, res.clone()));
         return res;
       });
-      return cached || fetchPromise;
+      return cached || net;
     })
   );
 });
