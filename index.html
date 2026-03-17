@@ -585,6 +585,13 @@
     border-radius:var(--radius-sm); padding:14px;
     display:flex; flex-direction:column; gap:4px;
     animation: txIn 0.4s both;
+    border-left:3px solid var(--sw-color, var(--accent));
+    position:relative; overflow:hidden;
+  }
+  .sw-card::before {
+    content:''; position:absolute; top:0; left:0; bottom:0; width:3px;
+    background:var(--sw-color, var(--accent));
+    border-radius:2px 0 0 2px;
   }
   .sw-card.wide { grid-column:1/-1; }
   .sw-icon { font-size:20px; }
@@ -3205,32 +3212,32 @@ function renderSmartWidget() {
   const cur = CUR();
 
   el.innerHTML = `
-    <div class="sw-card">
+    <div class="sw-card" style="--sw-color:#fa6d8f">
       <div class="sw-icon">📅</div>
       <div class="sw-label">Этот месяц</div>
-      <div class="sw-value">${formatNum(sumThis)}</div>
+      <div class="sw-value" style="color:#fa6d8f">${formatNum(sumThis)}</div>
       <div class="sw-sub ${momCls}">${momText} vs прошлый</div>
     </div>
-    <div class="sw-card">
+    <div class="sw-card" style="--sw-color:#fad06d">
       <div class="sw-icon">☀️</div>
       <div class="sw-label">Сегодня</div>
-      <div class="sw-value">${formatNum(todaySum)}</div>
+      <div class="sw-value" style="color:#fad06d">${formatNum(todaySum)}</div>
       <div class="sw-sub">среднее: ${formatNum(avgDaily)} ${cur}/день</div>
     </div>
-    <div class="sw-card">
+    <div class="sw-card" style="--sw-color:#7c6dfa">
       <div class="sw-icon">🔮</div>
       <div class="sw-label">Прогноз на месяц</div>
-      <div class="sw-value">${formatNum(projected)}</div>
+      <div class="sw-value" style="color:#7c6dfa">${formatNum(projected)}</div>
       <div class="sw-sub">при текущем темпе</div>
     </div>
-    <div class="sw-card">
+    <div class="sw-card" style="--sw-color:${topCat ? topCat.color : '#6dfad6'}">
       <div class="sw-icon">${topCat ? topCat.icon : '📊'}</div>
       <div class="sw-label">Топ категория</div>
-      <div class="sw-value" style="font-size:14px">${topCat ? topCat.label : '—'}</div>
+      <div class="sw-value" style="font-size:14px;color:${topCat ? topCat.color : '#6dfad6'}">${topCat ? topCat.label : '—'}</div>
       <div class="sw-sub">${topCatEntry ? formatNum(topCatEntry[1]) + ' ' + cur : 'нет данных'}</div>
     </div>
     ${budget > 0 ? `
-    <div class="sw-card wide">
+    <div class="sw-card wide" style="--sw-color:${budgetColor}">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <div class="sw-label">💰 Бюджет месяца</div>
