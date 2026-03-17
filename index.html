@@ -124,18 +124,21 @@
   /* ====== BALANCE CARD ====== */
   .balance-card {
     margin:0 20px 20px;
-    background: linear-gradient(135deg, rgba(124,109,250,0.15) 0%, rgba(250,109,143,0.08) 100%);
+    background: linear-gradient(135deg, rgba(124,109,250,0.12) 0%, rgba(250,109,143,0.06) 100%);
     border:1px solid var(--border);
     border-radius: var(--radius);
     padding:24px;
     position:relative; overflow:hidden;
     animation: fadeUp 0.5s 0.15s both;
+    border-top: 3px solid transparent;
+    border-image: linear-gradient(90deg, #7c6dfa, #fa6d8f) 1;
+    border-image-slice: 1;
   }
   .balance-card::after {
     content:'';
     position:absolute; top:-40px; right:-40px;
     width:140px; height:140px; border-radius:50%;
-    background: radial-gradient(circle, rgba(124,109,250,0.15) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(124,109,250,0.2) 0%, transparent 70%);
     pointer-events:none;
   }
 
@@ -171,6 +174,7 @@
     border-radius:var(--radius-sm);
     padding:12px 16px; min-width:110px;
     transition: all 0.2s;
+    border-top:3px solid var(--chip-color, var(--accent));
   }
   .stat-chip:hover { transform:translateY(-2px); box-shadow:var(--glow); }
   .stat-chip .sc-icon { font-size:20px; margin-bottom:6px; }
@@ -221,7 +225,13 @@
   .legend-val { font-size:12px; font-weight:600; }
 
   /* Monthly chart */
+  .donut-wrap {
+    border-top:3px solid #fa9e6d;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:20px; margin-bottom:20px;
+  }
   .chart-wrap {
+    border-top:3px solid #6daaff;
     background:var(--surface);
     border:1px solid var(--border);
     border-radius:var(--radius);
@@ -876,6 +886,7 @@
     border-radius:var(--radius);
     padding:16px;
     animation: fadeUp 0.5s 0.18s both;
+    border-top:3px solid #6dfad6;
   }
   .today-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
   .today-title { font-size:12px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:1px; }
@@ -923,6 +934,7 @@
     border-radius:var(--radius);
     padding:20px; margin-bottom:20px;
     overflow:hidden;
+    border-top:3px solid var(--accent);
   }
   .month-selector {
     display:flex; gap:8px; margin-bottom:16px; overflow-x:auto; scrollbar-width:none;
@@ -1312,6 +1324,18 @@
         </div>
         <div class="compare-bars" id="compareBars"></div>
         <div class="compare-totals" id="compareTotals"></div>
+      </div>
+
+      <!-- AI Analysis -->
+      <div id="aiCard" style="margin:0 0 20px">
+        <div class="ai-card">
+          <div class="ai-header">
+            <span class="ai-icon">🤖</span>
+            <span class="ai-title">ИИ-анализ расходов</span>
+            <button onclick="loadAiInsights()" style="margin-left:auto;background:rgba(124,109,250,0.15);border:1px solid var(--accent);color:var(--accent);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">✨ Анализировать</button>
+          </div>
+          <div class="ai-text" id="aiText">Нажмите "Анализировать" чтобы получить персональный анализ ваших расходов</div>
+        </div>
       </div>
 
     </div>
@@ -1739,7 +1763,7 @@ function showTab(name, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   if (el) el.classList.add('active');
-  if (name === 'analytics') renderAnalytics();
+  if (name === 'analytics') { renderAnalytics(); }
   if (name === 'history') renderHistory();
   if (name === 'home') renderHome();
   if (name === 'goals') renderGoals();
@@ -1928,7 +1952,7 @@ function renderHome() {
   const sorted = Object.entries(byCat).sort((a,b) => b[1]-a[1]).slice(0,5);
   catRow.innerHTML = sorted.map(([catId, val]) => {
     const cat = CATS.find(c => c.id === catId) || CATS[CATS.length-1];
-    return `<div class="stat-chip">
+    return `<div class="stat-chip" style="--chip-color:${cat.color}">
       <div class="sc-icon">${cat.icon}</div>
       <div class="sc-label">${cat.label}</div>
       <div class="sc-val" style="color:${cat.color}">${formatNum(val)} ${CUR()}</div>
