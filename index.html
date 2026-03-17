@@ -103,22 +103,33 @@
 
   /* ====== TABS ====== */
   .tabs {
-    display:flex; gap:8px; padding:0 20px 20px;
+    display:flex; gap:6px;
+    padding:0 20px 16px;
+    overflow-x:auto; scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
     animation: fadeUp 0.5s 0.1s both;
   }
+  .tabs::-webkit-scrollbar { display:none; }
   @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } }
 
   .tab {
-    flex:1; padding:10px 0; border-radius:var(--radius-sm);
-    background:var(--surface); border:1px solid transparent;
-    color:var(--text2); font-family:'Golos Text',sans-serif; font-size:13px; font-weight:600;
-    cursor:pointer; transition:all 0.25s; text-align:center;
+    flex-shrink:0;
+    min-width:72px;
+    padding:9px 14px;
+    border-radius:20px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text2);
+    font-family:'Golos Text',sans-serif;
+    font-size:12px; font-weight:600;
+    cursor:pointer; transition:all 0.2s;
+    text-align:center; white-space:nowrap;
   }
   .tab.active {
-    background: linear-gradient(135deg, rgba(124,109,250,0.2), rgba(250,109,143,0.1));
-    border-color:var(--border);
-    color:var(--text);
-    box-shadow: var(--glow);
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+    box-shadow:0 4px 12px rgba(124,109,250,0.4);
   }
 
   /* ====== BALANCE CARD ====== */
@@ -3325,6 +3336,8 @@ function toggleTheme() {
   const btn = document.getElementById('themeToggleBtn');
   if (btn) btn.textContent = isLight ? '☀️' : '🌙';
   settings.theme = isLight ? 'light' : 'dark';
+  // Save to localStorage immediately for instant apply on reload
+  lsSet('expenses_settings', settings);
   saveSettingsToFirestore();
 }
 
@@ -3414,7 +3427,7 @@ async function loadAiInsights() {
   }
 
   const btn = document.getElementById('aiAnalyzeBtn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Анализирую...'; }
+  if (btn) { btn.disabled = true; btn.style.opacity='0.7'; btn.textContent = '⏳ Анализирую...'; }
   const t0 = Date.now();
   el.innerHTML = '<div class="ai-loading"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>';
 
@@ -3487,7 +3500,7 @@ ${topTx ? `\nСамая крупная трата: ${topTx.name} — ${formatNum
   } catch(e) {
     el.textContent = 'Ошибка: ' + e.message;
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🔍 Анализировать расходы'; }
+    if (btn) { btn.disabled = false; btn.style.opacity='1'; btn.textContent = '🔍 Анализировать расходы'; }
   }
 }
 
