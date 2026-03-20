@@ -1407,6 +1407,26 @@
     <div class="settings-section">
 
       <!-- User info card -->
+<!-- ======= SUBSCRIPTIONS MODAL ======= -->
+  <div id="subModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:2000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(8px);">
+    <div style="background:var(--surface);border-radius:var(--radius);padding:24px;width:100%;max-width:380px;max-height:85vh;overflow-y:auto;border:1px solid var(--border);box-shadow:0 12px 48px rgba(0,0,0,0.5);">
+      <h3 style="font-family:'Unbounded',sans-serif;font-size:18px;margin-bottom:16px;text-align:center;">🔁 Регулярные платежи</h3>
+      <div id="subList" style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;"></div>
+      
+      <div style="background:var(--surface2);border-radius:16px;padding:20px;border:1px solid var(--border);">
+        <h4 style="font-size:14px;margin-bottom:14px;color:var(--text);font-family:'Unbounded',sans-serif;">Новый платеж</h4>
+        <input id="subName" class="field-input" placeholder="Название (Netflix, Интернет)" style="margin-bottom:10px;">
+        <div style="display:flex;gap:10px;margin-bottom:10px;">
+          <input id="subAmount" class="field-input" type="number" placeholder="Сумма" style="flex:1;">
+          <input id="subDay" class="field-input" type="number" min="1" max="31" placeholder="День (1-31)" style="flex:1;">
+        </div>
+        <select id="subCat" class="field-input" style="margin-bottom:16px;width:100%;"></select>
+        <button class="submit-btn" style="width:100%;padding:14px;" onclick="addSub()">+ Сохранить платеж</button>
+      </div>
+      <button style="width:100%;padding:14px;margin-top:16px;background:var(--surface3);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-size:14px;transition:0.2s" onclick="closeSubModal()">Закрыть</button>
+    </div>
+  </div>
+
       <div class="settings-card" id="userInfoCard">
         <h3>👤 Аккаунт</h3>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
@@ -1430,6 +1450,11 @@
             <span id="currencySettingsBtn">сом</span> Изменить
           </button>
         </div>
+      </div>
+
+      <div class="settings-card">
+        <h3>🔁 Подписки / Регулярные платежи</h3>
+        <button class="copy-btn" style="width:100%;color:var(--accent);border-color:var(--accent)" onclick="openSubModal()">Управление подписками</button>
       </div>
 
       <div class="settings-card">
@@ -1656,7 +1681,7 @@ const INCOME_SOURCES = [
 ];
 
 // Data loaded fresh per user after login — start empty
-let data = { transactions: [] };
+let data = { transactions: [], subscriptions: [] };
 let settings = { initialBalance:0, monthBudget:0 };
 
 // User-scoped localStorage helpers
@@ -1746,6 +1771,7 @@ window._onAuthReady = async (user) => {
 
     // Then load fresh data from Firebase in background
     await loadFromDB();
+    processSubscriptions();
 
     // Refresh UI with fresh data
     loadSettings();
@@ -2854,8 +2880,10 @@ async function saveData() {
   lsSet('expenses_data', data);
   if (currentUser && window._fbSet) {
     try {
-      const clean = cleanForFirebase(data.transactions || []);
-      await window._fbSet(window._fbRef(window._fbDb, userPath('transactions')), clean);
+      const cleanTx = cleanForFirebase(data.transactions || []);
+      const cleanSub = cleanForFirebase(data.subscriptions || []);
+      await window._fbSet(window._fbRef(window._fbDb, userPath('transactions')), cleanTx);
+      await window._fbSet(window._fbRef(window._fbDb, userPath('subscriptions')), cleanSub);
     } catch(e) { console.warn('RTDB save error:', e); }
   }
 }
@@ -2911,7 +2939,14 @@ async function loadFromDB() {
       goalsData = Array.isArray(val) ? val.filter(Boolean) : Object.values(val).filter(Boolean);
       lsSet('goals_data', goalsData);
     }
-  } catch(e) { console.warn('Settings/goals load error:', e); }
+    const subSnap = await window._fbGet(window._fbChild(dbRef, userPath('subscriptions')));
+    if (subSnap.exists() && subSnap.val()) {
+      const val = subSnap.val();
+      data.subscriptions = Array.isArray(val) ? val.filter(Boolean) : Object.values(val).filter(Boolean);
+    } else {
+      data.subscriptions = [];
+    }
+  } catch(e) { console.warn('Settings/goals/subs load error:', e); }
 
   // Subscribe to real-time transactions updates
   if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
@@ -3629,6 +3664,100 @@ ${topTx ? `\nСамая крупная трата: ${topTx.name} — ${formatNum
   } finally {
     if (btn) { btn.disabled = false; btn.style.opacity='1'; btn.textContent = '🔍 Анализировать расходы'; }
     if (aiCard) aiCard.classList.remove('generating');
+  }
+}
+
+// ==============================
+// SUBSCRIPTIONS
+// ==============================
+function openSubModal() {
+  document.getElementById('subModal').style.display = 'flex';
+  renderSubs();
+  const catSel = document.getElementById('subCat');
+  catSel.innerHTML = CATS.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
+}
+function closeSubModal() {
+  document.getElementById('subModal').style.display = 'none';
+}
+function renderSubs() {
+  const list = document.getElementById('subList');
+  if (!data.subscriptions || data.subscriptions.length === 0) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--text2);text-align:center;">Нет регулярных платежей</div>';
+    return;
+  }
+  list.innerHTML = data.subscriptions.map(s => {
+    const cat = CATS.find(c => c.id === s.category) || CATS[CATS.length-1];
+    return `<div style="display:flex;align-items:center;background:var(--surface2);padding:10px 14px;border-radius:12px;gap:10px;border:1px solid var(--border)">
+      <div style="font-size:20px;width:32px;height:32px;border-radius:8px;background:${cat.color}22;display:flex;align-items:center;justify-content:center">${cat.icon}</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:600">${s.name}</div>
+        <div style="font-size:11px;color:var(--text2)">Каждое ${s.day}-е число</div>
+      </div>
+      <div style="font-size:14px;font-weight:700;color:var(--accent2)">${formatNum(s.amount)} ${CUR()}</div>
+      <button onclick="deleteSub('${s.id}')" style="background:none;border:none;color:var(--text2);font-size:16px;cursor:pointer;padding:4px">✕</button>
+    </div>`;
+  }).join('');
+}
+function addSub() {
+  const name = document.getElementById('subName').value.trim();
+  const amt = parseFloat(document.getElementById('subAmount').value);
+  const day = parseInt(document.getElementById('subDay').value);
+  const cat = document.getElementById('subCat').value;
+
+  if (!name || isNaN(amt) || isNaN(day) || day < 1 || day > 31) {
+    showToast('Проверьте данные подписки', 'error'); return;
+  }
+
+  if (!data.subscriptions) data.subscriptions = [];
+  data.subscriptions.push({
+    id: 'sub_' + Date.now().toString(36),
+    name, amount: amt, day, category: cat,
+    lastProcessedMonth: null 
+  });
+  
+  saveData();
+  renderSubs();
+  document.getElementById('subName').value = '';
+  document.getElementById('subAmount').value = '';
+  document.getElementById('subDay').value = '';
+  showToast('Подписка добавлена', 'success');
+  processSubscriptions(); 
+}
+function deleteSub(id) {
+  if (!confirm('Удалить регулярный платеж?')) return;
+  data.subscriptions = data.subscriptions.filter(s => s.id !== id);
+  saveData();
+  renderSubs();
+  showToast('Удалено', 'error');
+}
+function processSubscriptions() {
+  if (!data.subscriptions || data.subscriptions.length === 0) return;
+  const now = new Date();
+  const cm = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  let added = false;
+  
+  data.subscriptions.forEach(sub => {
+    if (now.getDate() >= sub.day && sub.lastProcessedMonth !== cm) {
+      data.transactions.push({
+        id: 'tx_sub_' + Date.now().toString(36) + Math.random().toString(36).substr(2,4),
+        type: 'expense',
+        amount: parseFloat(sub.amount),
+        category: sub.category,
+        name: sub.name,
+        date: `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(sub.day).padStart(2,'0')}`,
+        note: 'Автоплатеж (Подписка)'
+      });
+      sub.lastProcessedMonth = cm;
+      added = true;
+    }
+  });
+
+  if (added) {
+    // Save to RTDB and Refresh UI automatically via _onValue listener (since we mutate data.transactions. Wait, _fbSet triggers onValue which pushes to data.transactions. 
+    // It's safer to just saveData() here.
+    saveData();
+    refreshAll();
+    showToast('Сработали регулярные платежи 🔄', 'success');
   }
 }
 
