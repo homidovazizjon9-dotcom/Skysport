@@ -2760,22 +2760,44 @@
           </div>
         </div>
 
-        <div class="settings-card" id="userInfoCard">
-          <h3>👤 Аккаунт</h3>
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-            <img id="settingsAvatar" src="" style="width:44px;height:44px;border-radius:50%;object-fit:cover"
-              onerror="this.style.display='none'">
-            <div>
-              <div style="font-size:14px;font-weight:700" id="settingsName">—</div>
-              <div style="font-size:12px;color:var(--text2)" id="settingsEmail">—</div>
+        <div class="settings-card" id="userInfoCard" style="background: linear-gradient(135deg, rgba(26,29,45,0.8), rgba(124,109,250,0.1)); border: 1px solid rgba(124,109,250,0.3); border-radius: 24px; padding: 24px; position: relative; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.3); margin-top: 8px;">
+          <!-- decorative blur -->
+          <div style="position:absolute; top:-40px; right:-40px; width:120px; height:120px; background:var(--accent); border-radius:50%; filter:blur(60px); opacity:0.3; pointer-events:none;"></div>
+          <div style="position:absolute; bottom:-40px; left:-40px; width:100px; height:100px; background:var(--accent2); border-radius:50%; filter:blur(50px); opacity:0.2; pointer-events:none;"></div>
+
+          <div style="position:relative; z-index:1;">
+            <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
+              <div style="position:relative;">
+                <img id="settingsAvatar" src="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; border:2px solid var(--accent); padding:2px; background:var(--surface);" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' viewBox=\\\'0 0 24 24\\\' fill=\\\'%237c6dfa\\\'><path d=\\\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\\\'/></svg>'">
+                <div style="position:absolute; bottom:0; right:0; width:14px; height:14px; background:#6dfa9e; border:2px solid var(--surface); border-radius:50%; box-shadow:0 0 8px rgba(109,250,158,0.5);"></div>
+              </div>
+              <div>
+                <div style="font-family:'Unbounded', sans-serif; font-size:16px; font-weight:700; color:#fff;" id="settingsName">—</div>
+                <div style="font-size:12px; color:var(--text2); margin-top:2px;" id="settingsEmail">—</div>
+                <div style="display:inline-block; margin-top:6px; padding:3px 8px; background:rgba(124,109,250,0.2); border-radius:12px; font-size:10px; font-weight:700; color:var(--accent); letter-spacing:0.5px;">PRO MEMBER ✨</div>
+              </div>
             </div>
+
+            <!-- Stats grid -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:12px; border-radius:16px; text-align:center;">
+                <div style="font-size:10px; color:var(--text2); margin-bottom:4px; text-transform:uppercase; letter-spacing:1px;">Транзакции</div>
+                <div style="font-size:18px; font-weight:800; color:var(--accent); font-family:'Unbounded', sans-serif;" id="profileStatsTxs">—</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:12px; border-radius:16px; text-align:center;">
+                <div style="font-size:10px; color:var(--text2); margin-bottom:4px; text-transform:uppercase; letter-spacing:1px;">Расход (мес)</div>
+                <div style="font-size:16px; font-weight:800; color:var(--accent2); font-family:'Unbounded', sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="profileStatsSpent">—</div>
+              </div>
+            </div>
+
+            <!-- Warning note -->
+            <div style="font-size:11px; color:rgba(109,250,214,0.8); background:rgba(109,250,214,0.1); padding:10px 14px; border-radius:12px; margin-bottom:20px; border:1px dashed rgba(109,250,214,0.3); display:flex; align-items:center; gap:8px;">
+              <span style="font-size:16px;">🛡️</span>
+              <span style="flex:1; line-height:1.4;">Данные зашифрованы и хранятся в Firebase</span>
+            </div>
+
+            <button class="copy-btn" style="width:100%; color:#fa6d8f; border-color:rgba(250,109,143,0.3); background:rgba(250,109,143,0.05); transition:all 0.2s; font-weight:600;" onmouseover="this.style.background='rgba(250,109,143,0.15)'" onmouseout="this.style.background='rgba(250,109,143,0.05)'" onclick="handleSignOut()">🚪 Выйти из аккаунта</button>
           </div>
-          <div
-            style="font-size:12px;color:var(--accent3);background:rgba(109,250,214,0.1);padding:10px;border-radius:8px;margin-bottom:12px">
-            🔒 Ваши данные хранятся в Firebase — недоступны другим пользователям
-          </div>
-          <button class="copy-btn" style="width:100%;color:var(--accent2);border-color:var(--accent2)"
-            onclick="handleSignOut()">🚪 Выйти из аккаунта</button>
         </div>
 
         <div class="settings-card">
@@ -3212,6 +3234,20 @@
         if (el) el.textContent = currentUser.displayName || 'Пользователь';
         if (em) em.textContent = currentUser.email || '';
         if (av && currentUser.photoURL) av.src = currentUser.photoURL;
+
+        // Populate profile stats
+        const txsCount = document.getElementById('profileStatsTxs');
+        if (txsCount) txsCount.textContent = data.transactions.length;
+
+        const spentEl = document.getElementById('profileStatsSpent');
+        if (spentEl) {
+          const now = new Date();
+          const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          const spentThisMonth = data.transactions
+            .filter(t => t.date.startsWith(thisMonth) && t.type === 'expense')
+            .reduce((sum, t) => sum + t.amount, 0);
+          spentEl.textContent = formatNum(spentThisMonth) + ' ' + (settings.currency || 'сом');
+        }
       }
     }
 
