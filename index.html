@@ -320,21 +320,23 @@
     .stats-row {
       display: flex;
       gap: 10px;
-      padding: 0 20px 20px 20px;
+      padding: 0 0 20px;
       overflow-x: auto;
       scrollbar-width: none;
       scroll-snap-type: x mandatory;
       animation: fadeUp 0.5s 0.2s both;
     }
 
-    .stats-row::before,
-    .stats-row::after {
-      content: '';
-      flex-shrink: 0;
-    }
-
     .stats-row::-webkit-scrollbar {
       display: none;
+    }
+
+    .stat-chip:first-child {
+      margin-left: 20px;
+    }
+
+    .stat-chip:last-child {
+      margin-right: 20px;
     }
 
     .stat-chip {
