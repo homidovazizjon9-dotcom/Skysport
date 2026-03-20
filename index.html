@@ -3551,11 +3551,18 @@
         btn.className = 'stats-expand-btn';
         btn.textContent = `▾ Ещё ${sorted.length - TOP} категорий`;
         btn.onclick = () => {
-          catRow.innerHTML = sorted.map(([id, val]) => chipHtml(id, val)).join('');
-          btn.remove();
+          const isExpanded = catRow.children.length > TOP;
+          if (isExpanded) {
+            catRow.innerHTML = sorted.slice(0, TOP).map(([id, val]) => chipHtml(id, val)).join('');
+            btn.textContent = `▾ Ещё ${sorted.length - TOP} категорий`;
+          } else {
+            catRow.innerHTML = sorted.map(([id, val]) => chipHtml(id, val)).join('');
+            btn.textContent = `▴ Скрыть`;
+          }
         };
         catRow.insertAdjacentElement('afterend', btn);
       }
+
 
       // Today widget
       renderTodayWidget();
