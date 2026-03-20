@@ -3521,13 +3521,17 @@
         byCat[t.category] += t.amount;
       });
       const sorted = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 5);
-      catRow.innerHTML = sorted.map(([catId, val]) => {
+      catRow.innerHTML = sorted.map(([catId, val], idx) => {
         const cat = CATS.find(c => c.id === catId) || CATS[CATS.length - 1];
-        return `<div class="stat-chip" style="--chip-color:${cat.color}">
+        const isFirst = idx === 0;
+        const isLast = idx === sorted.length - 1;
+        const extraStyle = isFirst ? 'margin-left:20px;' : isLast ? 'margin-right:20px;' : '';
+        return `<div class="stat-chip" style="--chip-color:${cat.color};${extraStyle}">
       <div class="sc-icon">${cat.icon}</div>
       <div class="sc-label">${cat.label}</div>
       <div class="sc-val" style="color:${cat.color}">${formatNum(val)} ${CUR()}</div>
     </div>`;
+
       }).join('');
 
       // Today widget
