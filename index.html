@@ -2384,6 +2384,297 @@
     .ct-diff.worse {
       color: var(--accent2);
     }
+
+    /* ====== BUDGET PLAN TAB ====== */
+    @keyframes planFadeIn {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .plan-section {
+      padding: 0 20px;
+      animation: planFadeIn 0.45s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+    }
+
+    /* Glass hero card */
+    .plan-hero {
+      background: linear-gradient(135deg, rgba(124,109,250,0.14) 0%, rgba(250,109,143,0.08) 100%);
+      border: 1px solid rgba(124,109,250,0.28);
+      border-radius: var(--radius);
+      padding: 22px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+      border-top: 3px solid var(--accent);
+    }
+
+    .plan-hero::before {
+      content: '';
+      position: absolute;
+      top: -30px; right: -30px;
+      width: 110px; height: 110px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(124,109,250,0.22) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .plan-hero-title {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 14px;
+    }
+
+    .plan-budget-input-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      margin-bottom: 14px;
+    }
+
+    .plan-budget-input-row .field-input {
+      font-size: 22px;
+      font-weight: 700;
+      flex: 1;
+    }
+
+    .plan-save-btn {
+      padding: 13px 20px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .plan-save-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(124,109,250,0.4);
+    }
+
+    .plan-save-btn:active { transform: scale(0.97); }
+
+    /* Available per day card */
+    .plan-day-card {
+      background: linear-gradient(135deg, rgba(109,250,214,0.12), rgba(124,109,250,0.08));
+      border: 1px solid rgba(109,250,214,0.3);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      animation: planFadeIn 0.5s 0.1s both;
+    }
+
+    .plan-day-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+
+    .plan-day-label {
+      font-size: 11px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    .plan-day-value {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--accent3);
+      margin-top: 2px;
+    }
+
+    .plan-day-sub {
+      font-size: 11px;
+      color: var(--text2);
+      margin-top: 2px;
+    }
+
+    /* Category budget rows */
+    .plan-cats-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+      animation: planFadeIn 0.5s 0.15s both;
+    }
+
+    .plan-cats-card h3 {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 12px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .plan-cat-row {
+      margin-bottom: 16px;
+    }
+
+    .plan-cat-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .plan-cat-icon {
+      font-size: 16px;
+    }
+
+    .plan-cat-name {
+      font-size: 13px;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .plan-cat-amounts {
+      font-size: 12px;
+      color: var(--text2);
+      text-align: right;
+    }
+
+    .plan-cat-input {
+      background: var(--surface2);
+      border: 1px solid var(--surface3);
+      border-radius: 10px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-family: 'Golos Text', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      outline: none;
+      width: 100%;
+      transition: all 0.2s;
+      margin-bottom: 6px;
+    }
+
+    .plan-cat-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124,109,250,0.12);
+    }
+
+    .plan-cat-track {
+      height: 7px;
+      border-radius: 4px;
+      background: var(--surface3);
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .plan-cat-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .plan-cat-fill.safe  { background: linear-gradient(90deg, var(--accent3), var(--accent)); }
+    .plan-cat-fill.warn  { background: linear-gradient(90deg, var(--accent4), var(--accent2)); }
+    .plan-cat-fill.over  { background: var(--accent2); }
+
+    .plan-status-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: 6px;
+    }
+
+    .plan-status-badge.ok   { background: rgba(109,250,214,0.15); color: var(--accent3); }
+    .plan-status-badge.warn { background: rgba(250,208,109,0.15); color: var(--accent4); }
+    .plan-status-badge.over { background: rgba(250,109,143,0.15); color: var(--accent2); }
+
+    /* AI budget card */
+    .plan-ai-card {
+      background: linear-gradient(135deg, rgba(124,109,250,0.1), rgba(250,109,143,0.07));
+      border: 1px solid rgba(124,109,250,0.28);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 16px;
+      animation: planFadeIn 0.5s 0.2s both;
+    }
+
+    .plan-ai-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .plan-ai-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .plan-ai-btn {
+      margin-left: auto;
+      padding: 6px 14px;
+      border-radius: 10px;
+      background: rgba(124,109,250,0.18);
+      border: 1px solid rgba(124,109,250,0.35);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .plan-ai-btn:hover {
+      background: rgba(124,109,250,0.3);
+    }
+
+    .plan-ai-text {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.6;
+    }
+
+    /* Overview totals */
+    .plan-overview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+      animation: planFadeIn 0.5s 0.05s both;
+    }
+
+    .plan-ov-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      border-left: 3px solid var(--ov-color, var(--accent));
+    }
+
+    .plan-ov-label {
+      font-size: 10px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .plan-ov-value {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+    }
   </style>
 
   <!-- Firebase -->
@@ -2572,6 +2863,7 @@
       <button class="tab" onclick="showTab('add',this)">+ Добавить</button>
       <button class="tab" onclick="showTab('analytics',this)">Аналитика</button>
       <button class="tab" onclick="showTab('history',this)">История</button>
+      <button class="tab" onclick="showTab('plan',this)">📅 План</button>
       <button class="tab" onclick="showTab('ai',this)">🤖</button>
       <button class="tab" onclick="showTab('goals',this)">🎯</button>
       <button class="tab" onclick="showTab('settings',this)">⚙️</button>
@@ -2959,6 +3251,52 @@
       </div>
     </div>
 
+    <!-- ======= BUDGET PLAN ======= -->
+    <div id="tab-plan" class="tab-content">
+      <div class="plan-section">
+
+        <!-- Hero: Total budget input + Day card -->
+        <div class="plan-hero">
+          <div class="plan-hero-title">📅 Бюджет на месяц</div>
+          <div class="plan-budget-input-row">
+            <input class="field-input" type="number" id="planTotalBudget"
+              placeholder="Введите общий бюджет..." inputmode="decimal"
+              oninput="onPlanBudgetInput()">
+            <button class="plan-save-btn" onclick="savePlanBudget()">Сохранить</button>
+          </div>
+          <!-- Day available card -->
+          <div class="plan-day-card" id="planDayCard">
+            <div class="plan-day-icon">☀️</div>
+            <div>
+              <div class="plan-day-label">Доступно на день</div>
+              <div class="plan-day-value" id="planDayValue">—</div>
+              <div class="plan-day-sub" id="planDaySub">Установите бюджет выше</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Overview grid -->
+        <div class="plan-overview-grid" id="planOverviewGrid"></div>
+
+        <!-- AI budget insight -->
+        <div class="plan-ai-card">
+          <div class="plan-ai-header">
+            <span style="font-size:18px">🤖</span>
+            <span class="plan-ai-title">ИИ-совет по бюджету</span>
+            <button class="plan-ai-btn" id="planAiBtn" onclick="loadPlanAiAdvice()">Получить совет</button>
+          </div>
+          <div class="plan-ai-text" id="planAiText">Нажмите «Получить совет» для персональных рекомендаций на основе ваших трат.</div>
+        </div>
+
+        <!-- Category budgets -->
+        <div class="plan-cats-card">
+          <h3>🗂 Бюджет по категориям</h3>
+          <div id="planCatsList"></div>
+        </div>
+
+      </div>
+    </div>
+
     <!-- ======= GOALS ======= -->
     <div id="tab-goals" class="tab-content">
       <div class="goals-section">
@@ -3333,6 +3671,7 @@
       if (name === 'home') renderHome();
       if (name === 'goals') renderGoals();
       if (name === 'ai') renderAiTab();
+      if (name === 'plan') renderPlanTab();
     }
 
     // ==============================
@@ -4472,6 +4811,221 @@
 
     function refreshAll() {
       renderHome();
+      // Refresh plan tab if it's visible
+      if (document.getElementById('tab-plan').classList.contains('active')) renderPlanTab();
+    }
+
+    // ==============================
+    // BUDGET PLAN TAB
+    // ==============================
+
+    // planCatBudgets: { catId: number } — stored inside settings
+    function getPlanBudgets() {
+      return settings.planCatBudgets || {};
+    }
+
+    function onPlanBudgetInput() {
+      // Live-update day card as user types
+      renderPlanDayCard();
+    }
+
+    function savePlanBudget() {
+      const val = parseFloat(document.getElementById('planTotalBudget').value) || 0;
+      settings.monthBudget = val;
+      saveSettingsToFirestore();
+      renderPlanTab();
+      // Also update home budget progress bar
+      refreshAll();
+      showToast('Бюджет сохранён ✓', 'success');
+    }
+
+    function savePlanCatBudget(catId, val) {
+      if (!settings.planCatBudgets) settings.planCatBudgets = {};
+      settings.planCatBudgets[catId] = parseFloat(val) || 0;
+      saveSettingsToFirestore();
+      renderPlanOverview();
+      renderPlanCats();
+    }
+
+    function renderPlanTab() {
+      // Sync total budget input
+      const inp = document.getElementById('planTotalBudget');
+      if (inp && !inp.matches(':focus')) inp.value = settings.monthBudget || '';
+      renderPlanDayCard();
+      renderPlanOverview();
+      renderPlanCats();
+    }
+
+    function getCurrentMonthSpent() {
+      const now = new Date();
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      return data.transactions.filter(t => t.date.startsWith(thisMonth) && t.type === 'expense');
+    }
+
+    function renderPlanDayCard() {
+      const valEl = document.getElementById('planDayValue');
+      const subEl = document.getElementById('planDaySub');
+      if (!valEl || !subEl) return;
+
+      const totalBudget = parseFloat(document.getElementById('planTotalBudget')?.value) || settings.monthBudget || 0;
+      if (!totalBudget) {
+        valEl.textContent = '—';
+        subEl.textContent = 'Установите бюджет выше';
+        return;
+      }
+
+      const now = new Date();
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+      const daysLeft = daysInMonth - now.getDate() + 1; // include today
+
+      const txMonth = getCurrentMonthSpent();
+      const spentSoFar = txMonth.reduce((s, t) => s + t.amount, 0);
+      const remaining = totalBudget - spentSoFar;
+      const perDay = daysLeft > 0 ? Math.max(remaining / daysLeft, 0) : 0;
+
+      valEl.textContent = formatNum(Math.round(perDay)) + ' ' + CUR();
+      const pct = totalBudget > 0 ? Math.round(spentSoFar / totalBudget * 100) : 0;
+      if (remaining <= 0) {
+        valEl.style.color = 'var(--accent2)';
+        subEl.textContent = '⚠️ Бюджет превышен!';
+      } else {
+        valEl.style.color = 'var(--accent3)';
+        subEl.textContent = `Осталось ${daysLeft} дн. · Потрачено ${pct}% бюджета`;
+      }
+    }
+
+    function renderPlanOverview() {
+      const el = document.getElementById('planOverviewGrid');
+      if (!el) return;
+
+      const now = new Date();
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      const txMonth = getCurrentMonthSpent();
+      const spent = txMonth.reduce((s, t) => s + t.amount, 0);
+      const budget = settings.monthBudget || 0;
+      const remaining = Math.max(budget - spent, 0);
+      const planBudgets = getPlanBudgets();
+      const totalPlanned = Object.values(planBudgets).reduce((s, v) => s + v, 0);
+      const cur = CUR();
+
+      const cards = [
+        { label: 'Бюджет месяца', value: budget > 0 ? formatNum(budget) + ' ' + cur : '—', color: 'var(--accent)' },
+        { label: 'Потрачено', value: formatNum(spent) + ' ' + cur, color: 'var(--accent2)' },
+        { label: 'Осталось', value: budget > 0 ? formatNum(remaining) + ' ' + cur : '—', color: 'var(--accent3)' },
+        { label: 'Запланировано по кат.', value: totalPlanned > 0 ? formatNum(totalPlanned) + ' ' + cur : '—', color: 'var(--accent4)' },
+      ];
+
+      el.innerHTML = cards.map(c => `
+        <div class="plan-ov-card" style="--ov-color:${c.color}">
+          <div class="plan-ov-label">${c.label}</div>
+          <div class="plan-ov-value" style="color:${c.color}">${c.value}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderPlanCats() {
+      const container = document.getElementById('planCatsList');
+      if (!container) return;
+
+      const now = new Date();
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      const txMonth = getCurrentMonthSpent();
+
+      // Compute spent per category this month
+      const spentByCat = {};
+      txMonth.forEach(t => {
+        spentByCat[t.category] = (spentByCat[t.category] || 0) + t.amount;
+      });
+
+      const planBudgets = getPlanBudgets();
+      const cur = CUR();
+
+      // Show all expense categories (exclude 'income')
+      const expCats = CATS.filter(c => c.id !== 'income');
+
+      container.innerHTML = expCats.map(cat => {
+        const planned = planBudgets[cat.id] || 0;
+        const spent = spentByCat[cat.id] || 0;
+        const pct = planned > 0 ? Math.min(Math.round(spent / planned * 100), 100) : 0;
+        const overPct = planned > 0 && spent > planned ? Math.round(spent / planned * 100) : pct;
+        const isOver = planned > 0 && spent > planned;
+        const isWarn = planned > 0 && pct >= 75 && !isOver;
+        const fillClass = isOver ? 'over' : isWarn ? 'warn' : 'safe';
+        const badgeClass = isOver ? 'over' : isWarn ? 'warn' : 'ok';
+        const badgeText = isOver ? '⚠️ Превышено' : isWarn ? '⚡ Почти' : (spent > 0 ? '✓ Ок' : '');
+
+        return `<div class="plan-cat-row">
+          <div class="plan-cat-header">
+            <span class="plan-cat-icon">${cat.icon}</span>
+            <span class="plan-cat-name">${cat.label}${badgeText ? `<span class="plan-status-badge ${badgeClass}">${badgeText}</span>` : ''}</span>
+            <span class="plan-cat-amounts">${formatNum(spent)} / ${planned > 0 ? formatNum(planned) : '—'} ${cur}</span>
+          </div>
+          <input class="plan-cat-input" type="number" inputmode="decimal"
+            id="planCat_${cat.id}"
+            placeholder="Лимит для «${cat.label}»..."
+            value="${planned || ''}"
+            onchange="savePlanCatBudget('${cat.id}', this.value)">
+          ${planned > 0 ? `<div class="plan-cat-track">
+            <div class="plan-cat-fill ${fillClass}" style="width:${Math.min(overPct, 100)}%"></div>
+          </div>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    async function loadPlanAiAdvice() {
+      const textEl = document.getElementById('planAiText');
+      const btn = document.getElementById('planAiBtn');
+      if (!textEl) return;
+
+      if (data.transactions.length < 2) {
+        textEl.textContent = 'Добавьте больше расходов для анализа 📊';
+        return;
+      }
+
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ Думаю...'; }
+      textEl.innerHTML = '<div class="ai-loading"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>';
+
+      const now = new Date();
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      const txMonth = getCurrentMonthSpent();
+      const spent = txMonth.reduce((s, t) => s + t.amount, 0);
+      const budget = settings.monthBudget || 0;
+      const planBudgets = getPlanBudgets();
+      const daysLeft = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate() - now.getDate() + 1;
+      const cur = CUR();
+
+      // Spent by category
+      const spentByCat = {};
+      txMonth.forEach(t => { spentByCat[t.category] = (spentByCat[t.category] || 0) + t.amount; });
+
+      const catLines = CATS.filter(c => c.id !== 'income').map(cat => {
+        const s = spentByCat[cat.id] || 0;
+        const p = planBudgets[cat.id] || 0;
+        if (!s && !p) return null;
+        const status = p > 0 ? (s > p ? ' ⚠️ПРЕВЫШЕНО' : s >= p*0.75 ? ' ⚡почти' : '') : '';
+        return `${cat.label}: потрачено ${formatNum(s)} ${cur}${p > 0 ? `, лимит ${formatNum(p)} ${cur}${status}` : ' (лимит не задан)'}`;
+      }).filter(Boolean).join('\n');
+
+      const prompt = `Ты финансовый советник. Дай 3-4 конкретных совета по бюджету пользователя. Будь дружелюбен, используй числа из данных. Без markdown, без звёздочек, по-русски.
+
+ОБЩИЙ БЮДЖЕТ: ${budget > 0 ? formatNum(budget) + ' ' + cur : 'не задан'}
+ПОТРАЧЕНО ЗА МЕСЯЦ: ${formatNum(spent)} ${cur}
+ОСТАЛОСЬ ДНЕЙ В МЕСЯЦЕ: ${daysLeft}
+ДОСТУПНО В ДЕНЬ: ${budget > 0 ? formatNum(Math.max((budget - spent) / daysLeft, 0)) + ' ' + cur : 'бюджет не задан'}
+
+ПО КАТЕГОРИЯМ:
+${catLines || 'нет данных по категориям'}
+
+Дай практические советы: где нужно сократить, что идёт хорошо, и как распределить оставшийся бюджет до конца месяца.`;
+
+      try {
+        const text = await callGroq(prompt);
+        textEl.textContent = text || 'Ответ не получен';
+      } catch(e) {
+        textEl.textContent = 'Ошибка: ' + e.message;
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Получить совет'; }
+      }
     }
 
     async function handleImportFile(e, typeHint) {
