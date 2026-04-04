@@ -4113,7 +4113,7 @@
       document.getElementById('noteInput').value = '';
       setDateToday();
       showToast(isIncome ? 'Доход добавлен! ✓' : 'Добавлено! ✓', 'success');
-      showTab('home', document.querySelector('.tab'));
+      switchNav('home', null);
     }
 
     // ==============================
@@ -4501,6 +4501,27 @@
 
       buildRow('monthSelectorA', compareMonthA, v => compareMonthA = v, 'active-a');
       buildRow('monthSelectorB', compareMonthB, v => compareMonthB = v, 'active-b');
+
+      // Add "Detail" buttons under each selector
+      const detBtnStyle = `margin-top:8px;padding:6px 14px;border-radius:20px;background:rgba(124,109,250,0.14);border:1px solid rgba(124,109,250,0.3);color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.2s;width:100%;`;
+      ['A','B'].forEach(letter => {
+        const monthKey = letter === 'A' ? compareMonthA : compareMonthB;
+        const wrap = document.getElementById('monthSelector' + letter);
+        if (!wrap) return;
+        let btn = document.getElementById('mdDetailBtn' + letter);
+        if (!btn) {
+          btn = document.createElement('button');
+          btn.id = 'mdDetailBtn' + letter;
+          btn.style.cssText = detBtnStyle;
+          btn.onclick = () => showMonthDetail(letter === 'A' ? compareMonthA : compareMonthB);
+          wrap.parentElement.insertBefore(btn, wrap.nextSibling);
+        } else {
+          btn.onclick = () => showMonthDetail(letter === 'A' ? compareMonthA : compareMonthB);
+        }
+        const MONTH_NAMES = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+        const [y, mo] = monthKey.split('-');
+        btn.textContent = `📊 Детали: ${MONTH_NAMES[parseInt(mo)-1]} ${y}`;
+      });
     }
 
     function getMonthTotals(monthKey) {
