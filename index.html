@@ -5693,6 +5693,17 @@ ${catLines || 'нет данных по категориям'}
     <Style ss:ID="header">
       <Font ss:Bold="1" ss:Color="#FFFFFF"/>
       <Interior ss:Color="#7C6DFA" ss:Pattern="Solid"/>
+      
+#nav-home.active .nav-icon svg { filter: drop-shadow(0 0 6px #00e5cc); stroke: #00e5cc; }
+#nav-history .nav-icon svg     { stroke: #5b6ef5; }
+#nav-analytics .nav-icon svg   { stroke: #f59e0b; }
+#nav-more .nav-icon svg        { stroke: #9ca3b8; }
+
+/* Активное состояние — яркий градиент через filter */
+.nav-item.active .nav-icon svg {
+  stroke: #00e5cc;
+  filter: drop-shadow(0 0 5px rgba(0,229,204,0.6));
+}
     </Style>
     <Style ss:ID="money">
       <NumberFormat ss:Format="#,##0.00"/>
