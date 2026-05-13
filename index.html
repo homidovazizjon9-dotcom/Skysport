@@ -3073,6 +3073,14 @@
         <div class="tx-list" id="recentList"></div>
       </div>
 
+      <!-- Daily Tip -->
+      <div style="padding:20px; padding-bottom:40px;">
+        <div class="section-title" style="margin-bottom:12px">💡 Совет дня</div>
+        <div id="dailyTipCard" class="balance-card" style="margin:0; padding:16px; border-top: 3px solid var(--accent3);">
+          <div id="dailyTipText" style="font-size:13px; color:var(--text2); line-height:1.5;"></div>
+        </div>
+      </div>
+
     </div>
 
     <!-- ======= ADD ======= -->
@@ -3170,6 +3178,7 @@
           <button class="period-btn" onclick="setPeriod('month',this)">Месяц</button>
           <button class="period-btn" onclick="setPeriod('all',this)">Всё</button>
         </div>
+        <div id="analyticsMonthPickerWrap" class="mdc-picker" style="display:none; margin-bottom:16px;"></div>
 
         <div class="donut-wrap">
           <div class="section-title">По категориям</div>
@@ -3667,6 +3676,7 @@
     let filterCat = 'all';
     let compareMonthA = null;
     let compareMonthB = null;
+    let selectedMonthForAnalytics = null;
     let editingTxId = null;
 
     // ==============================
@@ -4121,12 +4131,19 @@
     // ==============================
     function getStats(period = 'all') {
       const now = new Date();
+      if (!selectedMonthForAnalytics) {
+        selectedMonthForAnalytics = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      }
+
       const txs = data.transactions.filter(tx => {
         if (period === 'week') {
           const d = new Date(tx.date);
           return (now - d) / 86400000 <= 7;
         }
         if (period === 'month') {
+          return tx.date.startsWith(selectedMonthForAnalytics);
+        }
+        if (period === 'current_month_strict') {
           const d = new Date(tx.date);
           return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
         }
@@ -4159,7 +4176,7 @@
     // RENDER HOME
     // ==============================
     function renderHome() {
-      const s = getStats('month');
+      const s = getStats('current_month_strict');
 
       animateNumber('balanceAmount', s.balance);
       animateNumber('totalIncome', s.totalIncome);
@@ -4242,10 +4259,35 @@
       const recent = data.transactions.slice(0, 5);
       if (!recent.length) {
         list.innerHTML = '<div class="empty-state"><div class="es-icon">💸</div><p>Пока нет записей</p></div>';
-        return;
+      } else {
+        list.innerHTML = recent.map((tx, i) => renderTxItem(tx, i)).join('');
+        attachSwipeListeners(list);
       }
-      list.innerHTML = recent.map((tx, i) => renderTxItem(tx, i)).join('');
-      attachSwipeListeners(list);
+
+      // Daily tip logic
+      const tipCard = document.getElementById('dailyTipText');
+      if (tipCard) {
+         const inc = s.totalIncome || 0;
+         const exp = s.totalExpense || 0;
+         let tip = "Финансовая подушка безопасности — залог спокойствия. Откладывайте хотя бы 5-10% с каждого дохода.";
+         if (exp > inc && inc > 0) {
+             tip = "Кажется, расходы превышают доходы. Потерпи, этот этап пройдет. Возможно, стоит поискать дополнительный заработок или обсудить повышение на работе?";
+         } else if (exp === 0 && inc === 0) {
+             tip = "Начни вести учет прямо сейчас — добавь свою первую операцию, чтобы взять финансы под контроль.";
+         } else if (inc > exp * 2) {
+             tip = "Отличный месяц! Доходы значительно превышают расходы. Самое время подумать об инвестициях или пополнении сбережений.";
+         } else if (exp > 0) {
+             const tips = [
+                 "Старайся планировать крупные покупки заранее, чтобы они не били по карману.",
+                 "Прежде чем купить что-то незапланированное, возьми паузу на 24 часа. Если желание останется — покупай.",
+                 "Регулярно пересматривай свои подписки. Возможно, за какие-то сервисы ты платишь, но не пользуешься ими.",
+                 "Инвестиции в себя — самые выгодные. Новые навыки могут увеличить твой доход в будущем."
+             ];
+             const dayIndex = new Date().getDate() % tips.length;
+             tip = tips[dayIndex];
+         }
+         tipCard.textContent = tip;
+      }
     }
 
     function renderTodayWidget() {
@@ -4294,6 +4336,31 @@
         emptyDiv.id = 'analyticsEmptyState';
         const analyticsSec = document.querySelector('.analytics-section');
         if (analyticsSec) analyticsSec.appendChild(emptyDiv);
+      }
+
+      const pickerWrap = document.getElementById('analyticsMonthPickerWrap');
+      if (currentPeriod === 'month') {
+        pickerWrap.style.display = 'flex';
+        const months = new Set();
+        data.transactions.forEach(t => months.add(t.date.slice(0, 7)));
+        const d = new Date();
+        if (!selectedMonthForAnalytics) {
+          selectedMonthForAnalytics = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        }
+        for (let i = 0; i < 12; i++) {
+          months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+          d.setMonth(d.getMonth() - 1);
+        }
+        const sortedMonths = [...months].sort().reverse();
+        const MNAMES = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
+        pickerWrap.innerHTML = sortedMonths.map(mk => {
+          const [my, mm] = mk.split('-');
+          const isActive = mk === selectedMonthForAnalytics;
+          return `<button class="mdc-pill${isActive ? ' active' : ''}" onclick="selectedMonthForAnalytics='${mk}';renderAnalytics()">${MNAMES[parseInt(mm) - 1]} ${my}</button>`;
+        }).join('');
+      } else {
+        pickerWrap.style.display = 'none';
       }
 
       if (!hasData) {
