@@ -120,7 +120,7 @@
       z-index: 1;
       max-width: 480px;
       margin: 0 auto;
-      padding: 0 0 100px;
+      padding: 0 0 calc(100px + env(safe-area-inset-bottom, 0px));
     }
 
     /* ====== HEADER ====== */
@@ -198,8 +198,8 @@
       align-items: center;
       justify-content: space-around;
       z-index: 100;
-      padding: 4px 0 env(safe-area-inset-bottom, 6px);
-      height: 62px;
+      padding: 4px 0 env(safe-area-inset-bottom, 0px);
+      height: calc(62px + env(safe-area-inset-bottom, 0px));
     }
 
     .nav-item {
@@ -1009,7 +1009,7 @@
     /* Multiselect bar */
     .multiselect-bar {
       position: fixed;
-      bottom: 70px;
+      bottom: calc(70px + env(safe-area-inset-bottom, 0px));
       left: 50%;
       transform: translateX(-50%);
       width: calc(100% - 40px);
@@ -1942,7 +1942,11 @@
     /* ====== TOAST ====== */
     .toast {
       position: fixed;
-      bottom: 90px;
+      bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+      pointer-events: none;
+      width: max-content;
+      max-width: calc(100% - 40px);
+      text-align: center;
       left: 50%;
       transform: translateX(-50%) translateY(20px);
       background: var(--surface2);
@@ -1954,7 +1958,6 @@
       z-index: 1000;
       opacity: 0;
       transition: all 0.3s;
-      white-space: nowrap;
     }
 
     .toast.show {
@@ -1970,77 +1973,6 @@
     .toast.error {
       border-color: var(--accent2);
       color: var(--accent2);
-    }
-
-    /* ====== BOTTOM NAV ====== */
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 100%;
-      max-width: 480px;
-      background: rgba(13, 13, 20, 0.9);
-      backdrop-filter: blur(20px);
-      border-top: 1px solid var(--border);
-      display: flex;
-      z-index: 100;
-      padding: 8px 0 env(safe-area-inset-bottom, 8px);
-    }
-
-    .nav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 3px;
-      padding: 8px 0;
-      cursor: pointer;
-      transition: all 0.2s;
-      border: none;
-      background: transparent;
-      color: var(--text2);
-    }
-
-    .nav-item .nav-icon {
-      font-size: 22px;
-      transition: transform 0.2s;
-    }
-
-    .nav-item .nav-label {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-    }
-
-    .nav-item.active {
-      color: var(--accent);
-    }
-
-    .nav-item.active .nav-icon {
-      transform: scale(1.1);
-    }
-
-    /* FAB */
-    .fab {
-      width: 52px;
-      height: 52px;
-      border-radius: 16px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border: none;
-      color: #fff;
-      font-size: 24px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 20px rgba(124, 109, 250, 0.4);
-      transition: all 0.2s;
-      margin-top: -16px;
-    }
-
-    .fab:active {
-      transform: scale(0.9);
     }
 
     /* ====== TABS CONTENT ====== */
@@ -2845,7 +2777,7 @@
 #nav-more .nav-icon svg        { stroke: #9ca3b8; }
 
 /* Активное состояние — яркий градиент через filter */
-.nav-item.active .nav-icon svg {
+#bottomNav .nav-item.active .nav-icon svg {
   stroke: #00e5cc;
   filter: drop-shadow(0 0 5px rgba(0,229,204,0.6));
 }
@@ -2856,7 +2788,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getDatabase, ref, set, get, child, onValue, off }
+    import { getDatabase, ref, set, get, update, child, onValue, off }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
@@ -2882,6 +2814,7 @@
     window._fbSignOut = () => signOut(auth);
     window._fbRef = ref;
     window._fbSet = set;
+    window._fbUpdate = update;
     window._fbGet = get;
     window._fbChild = child;
     window._fbOnValue = onValue;
@@ -2990,7 +2923,7 @@
     <div style="position:relative; z-index:1;">
       <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
         <div style="position:relative;">
-          <img id="headerUserAvatar" src="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; border:2px solid var(--accent); padding:2px; background:var(--surface);" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%237c6dfa\'><path d=\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\'/></svg>'">
+          <img id="headerUserAvatar" style="width:56px; height:56px; border-radius:50%; object-fit:cover; border:2px solid var(--accent); padding:2px; background:var(--surface);" onerror="this.onerror=null;this.src=AVATAR_FALLBACK">
           <div style="position:absolute; bottom:0; right:0; width:14px; height:14px; background:#6dfa9e; border:2px solid var(--surface); border-radius:50%; box-shadow:0 0 8px rgba(109,250,158,0.5);"></div>
         </div>
         <div>
@@ -3289,7 +3222,7 @@
           <div style="position:relative; z-index:1;">
             <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
               <div style="position:relative;">
-                <img id="settingsAvatar" src="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; border:2px solid var(--accent); padding:2px; background:var(--surface);" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' viewBox=\\\'0 0 24 24\\\' fill=\\\'%237c6dfa\\\'><path d=\\\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\\\'/></svg>'">
+                <img id="settingsAvatar" style="width:56px; height:56px; border-radius:50%; object-fit:cover; border:2px solid var(--accent); padding:2px; background:var(--surface);" onerror="this.onerror=null;this.src=AVATAR_FALLBACK">
                 <div style="position:absolute; bottom:0; right:0; width:14px; height:14px; background:#6dfa9e; border:2px solid var(--surface); border-radius:50%; box-shadow:0 0 8px rgba(109,250,158,0.5);"></div>
               </div>
               <div>
@@ -3369,7 +3302,7 @@
             </label>
           </div>
           <div class="settings-row">
-            <label>Экспорт в Excel (.xlsx)</label>
+            <label>Экспорт в Excel (.xls)</label>
             <button class="copy-btn"
               style="width:auto;padding:8px 16px;color:var(--accent3);border-color:var(--accent3)"
               onclick="exportExcel()">📥 Excel</button>
@@ -3495,11 +3428,11 @@
             <input class="field-input" type="text" id="goalName" placeholder="Новый телефон, отпуск...">
           </div>
           <div class="field-group" style="margin-bottom:12px">
-            <div class="field-label">Целевая сумма (сом)</div>
+            <div class="field-label">Целевая сумма (<span class="cur">сом</span>)</div>
             <input class="field-input" type="number" id="goalTarget" inputmode="decimal" placeholder="50000">
           </div>
           <div class="field-group" style="margin-bottom:12px">
-            <div class="field-label">Уже накоплено (сом)</div>
+            <div class="field-label">Уже накоплено (<span class="cur">сом</span>)</div>
             <input class="field-input" type="number" id="goalSaved" inputmode="decimal" placeholder="0">
           </div>
           <div class="field-group" style="margin-bottom:12px">
@@ -3758,6 +3691,16 @@
     let compareMonthB = null;
     let selectedMonthForAnalytics = null;
     let editingTxId = null;
+    let _justSignedIn = false;
+
+    function resetUserState() {
+      data = { transactions: [], subscriptions: [] };
+      goalsData = [];
+      settings = { initialBalance: 0, monthBudget: 0 };
+      _groqKey = null;
+      compareMonthA = compareMonthB = selectedMonthForAnalytics = null;
+      if (multiselectMode) cancelMultiselect();
+    }
 
     // ==============================
     // INIT
@@ -3765,22 +3708,25 @@
     // Auth handlers
     async function handleSignIn() {
       document.getElementById('loginLoading').style.display = 'block';
+      _justSignedIn = true;
       try {
         await window._fbSignIn();
       } catch (e) {
         document.getElementById('loginLoading').style.display = 'none';
+        _justSignedIn = false;
         showToast('Ошибка входа: ' + e.message, 'error');
       }
     }
 
     async function handleSignOut() {
-      toggleUserMenu();
+      document.getElementById('userMenu').classList.remove('show');
       // Unsubscribe from real-time listener
       if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
       await window._fbSignOut();
       currentUser = null;
-      data = { transactions: [] };
-      goalsData = [];
+      // Settings/theme of the previous account must not leak into the next one
+      resetUserState();
+      document.body.classList.remove('light');
       document.getElementById('mainApp').style.display = 'none';
       document.getElementById('loginScreen').style.display = 'flex';
       showToast('Вы вышли из аккаунта', 'success');
@@ -3791,7 +3737,7 @@
       if (!menu.classList.contains('show')) {
         if (currentUser) {
           const avatar = document.getElementById('headerUserAvatar');
-          if (avatar && currentUser.photoURL) avatar.src = currentUser.photoURL;
+          if (avatar) avatar.src = currentUser.photoURL || AVATAR_FALLBACK;
           document.getElementById('userMenuName').textContent = currentUser.displayName || 'Пользователь';
           document.getElementById('userMenuEmail').textContent = currentUser.email || '';
         }
@@ -3825,6 +3771,9 @@
 
       if (user) {
         currentUser = user;
+        document.getElementById('loginLoading').style.display = 'none';
+        resetUserState();
+        loadCache();
 
         // Update avatar and user menu
         const avatar = document.getElementById('userAvatar');
@@ -3848,11 +3797,15 @@
 
         // Refresh UI with fresh data
         loadSettings();
+        applyTheme();
         refreshAll();
         if (document.getElementById('tab-goals').classList.contains('active')) renderGoals();
 
-        const name = user.displayName ? user.displayName.split(' ')[0] : '';
-        showToast(`Добро пожаловать${name ? ', ' + name : ''}! 👋`, 'success');
+        if (_justSignedIn) {
+          _justSignedIn = false;
+          const name = user.displayName ? user.displayName.split(' ')[0] : '';
+          showToast(`Добро пожаловать${name ? ', ' + name : ''}! 👋`, 'success');
+        }
 
         // Show currency selector only if not set AND first time (no transactions yet)
         if (!settings.currency) {
@@ -3871,7 +3824,7 @@
     function initApp() {
       // Reset AI text for new user session
       const aiEl = document.getElementById('aiText');
-      if (aiEl) aiEl.textContent = 'Нажмите "Обновить" для анализа';
+      if (aiEl) aiEl.textContent = 'Нажмите кнопку ниже, чтобы получить персональный анализ';
       // Reset Groq key cache so new user gets fresh key
       _groqKey = null;
       renderCatGrid();
@@ -3937,7 +3890,7 @@
         const av = document.getElementById('settingsAvatar');
         if (el) el.textContent = currentUser.displayName || 'Пользователь';
         if (em) em.textContent = currentUser.email || '';
-        if (av && currentUser.photoURL) av.src = currentUser.photoURL;
+        if (av) av.src = currentUser.photoURL || AVATAR_FALLBACK;
 
         // Populate profile stats
         const txsCount = document.getElementById('profileStatsTxs');
@@ -3960,9 +3913,12 @@
       const mb = document.getElementById('monthBudget');
       settings.initialBalance = parseFloat(ib ? ib.value : 0) || 0;
       settings.monthBudget = parseFloat(mb ? mb.value : 0) || 0;
-      saveSettingsToFirestore();
+      // Debounce: oninput fires on every keystroke
+      clearTimeout(_settingsSaveTimer);
+      _settingsSaveTimer = setTimeout(saveSettingsToFirestore, 600);
       refreshAll();
     }
+    let _settingsSaveTimer = null;
 
     // ==============================
     // NAVIGATION
@@ -3978,8 +3934,12 @@
       const tab = document.getElementById('tab-' + name);
       if (tab) tab.classList.add('active');
 
+      if (multiselectMode) cancelMultiselect();
+      window.scrollTo(0, 0);
+
       // Update bottom nav active state
       document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.more-item').forEach(b => b.classList.remove('active-more'));
       const primaryNavIds = ['home','history','analytics'];
       if (primaryNavIds.includes(name)) {
         const btn = document.getElementById('nav-' + name);
@@ -4023,6 +3983,7 @@
       const block = document.getElementById('monthDetailBlock');
       if (block) block.style.display = 'block';
       renderMonthDetail(monthKey);
+      if (block) block.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function closeMonthDetail() {
@@ -4177,22 +4138,23 @@
       const date = document.getElementById('dateInput').value;
       const note = document.getElementById('noteInput').value.trim();
 
-      if (!amount || amount <= 0) { showToast('Введите сумму ❌', 'error'); return; }
+      if (!(amount > 0) || !isFinite(amount)) { showToast('Введите сумму ❌', 'error'); return; }
       if (!name) { showToast(isIncome ? 'Укажите источник дохода ❌' : 'Введите название ❌', 'error'); return; }
 
+      if (!isDateKey(date)) { showToast('Укажите дату ❌', 'error'); return; }
+
       const cat = isIncome ? 'income' : currentCat;
-      const tx = {
-        id: Date.now().toString(),
+      const tx = normalizeTx({
+        id: newId(),
         date, name, amount,
         category: cat,
         type: currentType,
         incomeSource: isIncome ? currentIncomeSource : undefined,
-        note,
-        synced: false
-      };
+        note
+      });
 
       data.transactions.unshift(tx);
-      saveData();
+      persistTx({ [tx.id]: tx });
       refreshAll();
 
 
@@ -4215,18 +4177,16 @@
         selectedMonthForAnalytics = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       }
 
+      // Compare local YYYY-MM-DD strings: new Date('YYYY-MM-DD') is UTC midnight
+      const todayKey = dateKey(now);
+      const weekStart = new Date(now);
+      weekStart.setDate(weekStart.getDate() - 6);
+      const weekStartKey = dateKey(weekStart);
+
       const txs = data.transactions.filter(tx => {
-        if (period === 'week') {
-          const d = new Date(tx.date);
-          return (now - d) / 86400000 <= 7;
-        }
-        if (period === 'month') {
-          return tx.date.startsWith(selectedMonthForAnalytics);
-        }
-        if (period === 'current_month_strict') {
-          const d = new Date(tx.date);
-          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        }
+        if (period === 'week') return tx.date >= weekStartKey && tx.date <= todayKey;
+        if (period === 'month') return tx.date.startsWith(selectedMonthForAnalytics);
+        if (period === 'current_month_strict') return tx.date.startsWith(todayKey.slice(0, 7));
         return true;
       });
 
@@ -4263,7 +4223,7 @@
       animateNumber('totalExpense', s.totalExpense);
       document.getElementById('totalTx').textContent = data.transactions.length;
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = dateKey();
       const todaySpent = data.transactions.filter(t => t.date === today && t.type === 'expense').reduce((a, b) => a + b.amount, 0);
       const balCard = document.querySelector('.balance-card');
       if (balCard) {
@@ -4281,6 +4241,8 @@
         const fill = document.getElementById('bpFill');
         fill.style.width = pct + '%';
         fill.className = 'bp-fill ' + (pct < 60 ? 'safe' : pct < 90 ? 'warn' : 'over');
+      } else {
+        document.getElementById('budgetProgress').style.display = 'none';
       }
 
       // Cat stats chips — show top 3, rest hidden with expand button
@@ -4371,7 +4333,7 @@
     }
 
     function renderTodayWidget() {
-      const today = new Date().toISOString().split('T')[0];
+      const today = dateKey();
       const todayTxs = data.transactions.filter(t => t.date === today && t.type === 'expense');
       const todayTotal = todayTxs.reduce((s, t) => s + t.amount, 0);
       const el = document.getElementById('todayWidget');
@@ -4380,7 +4342,7 @@
       if (!todayTxs.length) {
         el.innerHTML = `<div class="today-header">
       <span class="today-title">Сегодня</span>
-      <span class="today-total">0 <span class="cur">сом</span></span>
+      <span class="today-total">0 ${CUR()}</span>
     </div>
     <div class="today-empty">Нет расходов сегодня 🎉</div>`;
         return;
@@ -4395,7 +4357,7 @@
         const cat = CATS.find(c => c.id === tx.category) || CATS[CATS.length - 1];
         return `<div class="today-row tx-item" data-id="${tx.id}" style="border-radius:10px;border:none;padding:8px 10px">
         <span class="today-icon tx-icon" style="width:28px;height:28px;font-size:14px;border-radius:8px;background:${cat.color}22">${cat.icon}</span>
-        <span class="today-name tx-info"><div class="tx-name" style="font-size:13px">${tx.name}</div></span>
+        <span class="today-name tx-info"><div class="tx-name" style="font-size:13px">${escapeHtml(tx.name)}</div></span>
         <span class="today-amt tx-amount" style="font-size:13px;color:var(--accent2)">${formatNum(tx.amount)} ${CUR()}</span>
       </div>`;
       }).join('')}
@@ -4414,8 +4376,7 @@
       if (!emptyDiv) {
         emptyDiv = document.createElement('div');
         emptyDiv.id = 'analyticsEmptyState';
-        const analyticsSec = document.querySelector('.analytics-section');
-        if (analyticsSec) analyticsSec.appendChild(emptyDiv);
+        document.getElementById('analyticsMonthPickerWrap').insertAdjacentElement('afterend', emptyDiv);
       }
 
       const pickerWrap = document.getElementById('analyticsMonthPickerWrap');
@@ -4443,49 +4404,41 @@
         pickerWrap.style.display = 'none';
       }
 
-      if (!hasData) {
-        const dw = document.querySelector('.donut-wrap'); if (dw) dw.style.display = 'none';
-        const cw = document.querySelector('.chart-wrap'); if (cw) cw.style.display = 'none';
-        const detailHeader = document.getElementById('catBarsDetail')?.previousElementSibling;
-        if (detailHeader) detailHeader.style.display = 'none';
-        const detail = document.getElementById('catBarsDetail');
-        if (detail) detail.style.display = 'none';
-        const monthWrap = document.querySelector('.month-compare-wrap');
-        if (monthWrap) monthWrap.style.display = 'none';
+      const toggle = (el, show, display = 'block') => { if (el) el.style.display = show ? display : 'none'; };
+      const detail = document.getElementById('catBarsDetail');
+      const hasAnyTx = data.transactions.length > 0;
+      toggle(document.querySelector('.donut-wrap'), hasData);
+      toggle(document.querySelector('.chart-wrap'), hasData);
+      toggle(detail?.previousElementSibling, hasData);
+      toggle(detail, hasData, 'flex');
+      // Month comparison stays available even if the selected period is empty
+      toggle(document.querySelector('.month-compare-wrap'), hasAnyTx);
 
+      if (!hasData) {
         emptyDiv.style.display = 'block';
-        emptyDiv.innerHTML = `
+        emptyDiv.innerHTML = hasAnyTx
+          ? `<div style="padding: 32px 20px; text-align: center; color: var(--text2); animation: fadeUp 0.5s both;">
+        <div style="font-size: 40px; margin-bottom: 12px;">🌿</div>
+        <div style="font-size: 14px;">Нет расходов за выбранный период</div>
+      </div>`
+          : `
       <div style="padding: 60px 20px; text-align: center; color: var(--text2); animation: fadeUp 0.5s both;">
         <div style="font-size: 64px; margin-bottom: 20px; opacity: 0.9;">👻</div>
         <div style="font-family: 'Unbounded', sans-serif; font-size: 18px; color: var(--text); margin-bottom: 12px;">Тут пока пусто!</div>
         <div style="font-size: 14px; line-height: 1.5; color: var(--text2);">Я готов считать твои миллионы.<br>Добавь первую операцию.</div>
       </div>
     `;
-        return;
       } else {
-        const dw = document.querySelector('.donut-wrap'); if (dw) dw.style.display = 'block';
-        const cw = document.querySelector('.chart-wrap'); if (cw) cw.style.display = 'block';
-        const detailHeader = document.getElementById('catBarsDetail')?.previousElementSibling;
-        if (detailHeader) detailHeader.style.display = 'block';
-        const detail = document.getElementById('catBarsDetail');
-        if (detail) detail.style.display = 'flex';
-        const monthWrap = document.querySelector('.month-compare-wrap');
-        if (monthWrap) monthWrap.style.display = 'block';
-        if (emptyDiv) emptyDiv.style.display = 'none';
+        emptyDiv.style.display = 'none';
+        renderDonut(s.byCat);
+        renderBarChart();
+        renderCatBars(s.byCat, s.expense);
       }
 
-      // Donut
-      renderDonut(s.byCat);
-
-      // Bar chart - last 7/14 days
-      renderBarChart();
-
-      // Cat bars
-      renderCatBars(s.byCat, s.expense);
-
-      // Month comparison
-      renderMonthSelectors();
-      renderMonthCompare();
+      if (hasAnyTx) {
+        renderMonthSelectors();
+        renderMonthCompare();
+      }
     }
 
     function renderDonut(byCat) {
@@ -4531,25 +4484,39 @@
 
     function renderBarChart() {
       const chart = document.getElementById('barChart');
-      const days = currentPeriod === 'week' ? 7 : 14;
-      const now = new Date();
       const cols = [];
-      for (let i = days - 1; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(d.getDate() - i);
-        const key = d.toISOString().split('T')[0];
-        const dayTxs = data.transactions.filter(t => t.date === key && t.type === 'expense');
-        const total = dayTxs.reduce((s, t) => s + t.amount, 0);
-        cols.push({ key, label: d.getDate() + '/' + (d.getMonth() + 1), total });
+      const addDay = d => cols.push({ key: dateKey(d), day: d.getDate(), label: d.getDate() + '/' + (d.getMonth() + 1), total: 0 });
+
+      if (currentPeriod === 'month' && selectedMonthForAnalytics) {
+        // Whole selected month instead of "last 14 days from today"
+        const [y, m] = selectedMonthForAnalytics.split('-').map(Number);
+        const days = new Date(y, m, 0).getDate();
+        for (let i = 1; i <= days; i++) addDay(new Date(y, m - 1, i));
+      } else {
+        const days = currentPeriod === 'week' ? 7 : 14;
+        for (let i = days - 1; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          addDay(d);
+        }
       }
 
+      const byDay = {};
+      data.transactions.forEach(t => {
+        if (t.type === 'expense') byDay[t.date] = (byDay[t.date] || 0) + t.amount;
+      });
+      cols.forEach(c => { c.total = byDay[c.key] || 0; });
+
+      const dense = cols.length > 14;
+      chart.style.gap = dense ? '2px' : '8px';
       const max = Math.max(...cols.map(c => c.total), 1);
-      chart.innerHTML = cols.map(col => {
+      chart.innerHTML = cols.map((col, i) => {
         const h = Math.round((col.total / max) * 80);
-        return `<div class="bar-col">
-      <div class="bar-val">${col.total > 0 ? formatNum(col.total) : ''}</div>
+        const label = dense ? (i === 0 || col.day % 5 === 0 ? col.day : '&nbsp;') : col.label;
+        return `<div class="bar-col" title="${col.label}: ${formatNum(col.total)} ${CUR()}">
+      <div class="bar-val">${!dense && col.total > 0 ? formatNum(col.total) : ''}</div>
       <div class="bar-body" style="height:${h}px"></div>
-      <div class="bar-label">${col.label}</div>
+      <div class="bar-label">${label}</div>
     </div>`;
       }).join('');
     }
@@ -4798,20 +4765,18 @@
 
     function renderTxItem(tx, i) {
       const cat = CATS.find(c => c.id === tx.category) || CATS[CATS.length - 1];
-      const d = new Date(tx.date);
-      const dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+      const dateStr = parseDateKey(tx.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
       const sign = tx.type === 'income' ? '+' : '-';
       const color = tx.type === 'income' ? 'var(--accent3)' : 'var(--accent2)';
       const isSelected = selectedTxIds.has(tx.id);
 
       return `<div class="tx-wrap" style="animation-delay:${i * 0.05}s">
     <div class="tx-item${isSelected ? ' selected-multi' : ''}"
-         id="txitem-${tx.id}"
          data-id="${tx.id}">
       <div class="tx-icon" style="background:${cat.color}22">${cat.icon}</div>
       <div class="tx-info">
-        <div class="tx-name">${tx.name}</div>
-        <div class="tx-meta">${cat.label} · ${dateStr}${tx.note ? ' · ' + tx.note : ''}</div>
+        <div class="tx-name">${escapeHtml(tx.name)}</div>
+        <div class="tx-meta">${cat.label} · ${dateStr}${tx.note ? ' · ' + escapeHtml(tx.note) : ''}</div>
       </div>
       <div class="tx-amount" style="color:${color}">${sign}${formatNum(tx.amount)} ${CUR()}</div>
       <div class="tx-btns">
@@ -4828,29 +4793,42 @@
     let selectedTxIds = new Set();
     let multiselectMode = false;
     let longPressTimer = null;
+    let longPressFired = false;
 
     function attachSwipeListeners(container) {
       container.querySelectorAll('.tx-item').forEach(item => {
         const id = item.dataset.id;
+        let startX = 0, startY = 0;
 
         item.addEventListener('pointerdown', e => {
           // Only trigger long-press from the item body, not the buttons
           if (e.target.closest('.tx-btns')) return;
+          startX = e.clientX;
+          startY = e.clientY;
+          longPressFired = false;
+          clearTimeout(longPressTimer);
           longPressTimer = setTimeout(() => {
+            longPressFired = true;
             if (!multiselectMode) enterMultiselect();
             toggleSelectTx(id);
             if (navigator.vibrate) navigator.vibrate(40);
           }, 500);
         });
 
-        item.addEventListener('pointermove', () => clearTimeout(longPressTimer));
+        // Touch pointers jitter by a few px — cancel only on a real move
+        item.addEventListener('pointermove', e => {
+          if (Math.hypot(e.clientX - startX, e.clientY - startY) > 10) clearTimeout(longPressTimer);
+        });
         item.addEventListener('pointerup', () => clearTimeout(longPressTimer));
         item.addEventListener('pointercancel', () => clearTimeout(longPressTimer));
+        item.addEventListener('contextmenu', e => e.preventDefault());
 
-        // Tap in multiselect mode → toggle
         item.addEventListener('click', e => {
           if (e.target.closest('.tx-btns')) return;
+          // The click right after a long-press would immediately unselect the item
+          if (longPressFired) { longPressFired = false; return; }
           if (multiselectMode) toggleSelectTx(id);
+          else openEditModal(id);
         });
       });
     }
@@ -4863,8 +4841,9 @@
       if (selectedTxIds.has(id)) selectedTxIds.delete(id);
       else selectedTxIds.add(id);
       updateMultiselectBar();
-      const el = document.getElementById('txitem-' + id);
-      if (el) el.classList.toggle('selected-multi', selectedTxIds.has(id));
+      // The same transaction can be rendered on Home and in History at once
+      document.querySelectorAll(`.tx-item[data-id="${id}"]`)
+        .forEach(el => el.classList.toggle('selected-multi', selectedTxIds.has(id)));
     }
 
     function updateMultiselectBar() {
@@ -4889,9 +4868,10 @@
         `Удалить ${count} запис${count === 1 ? 'ь' : count < 5 ? 'и' : 'ей'}?`;
       document.getElementById('confirmOk').onclick = async () => {
         closeConfirm();
-        const toDelete = data.transactions.filter(t => selectedTxIds.has(t.id));
+        const changes = {};
+        selectedTxIds.forEach(id => { changes[id] = null; });
         data.transactions = data.transactions.filter(t => !selectedTxIds.has(t.id));
-        saveData(); refreshAll(); renderHistory();
+        persistTx(changes); refreshAll(); renderHistory();
         showToast(`Удалено ${count} записей`, 'error');
         cancelMultiselect();
 
@@ -4919,9 +4899,8 @@
     }
 
     async function deleteTxConfirmed(id) {
-      const tx = data.transactions.find(t => t.id === id);
       data.transactions = data.transactions.filter(t => t.id !== id);
-      saveData(); refreshAll(); renderHistory();
+      persistTx({ [id]: null }); refreshAll(); renderHistory();
       showToast('Удалено', 'error');
     }
 
@@ -4994,17 +4973,16 @@
 
         let deadlineStr = '';
         if (g.deadline) {
-          const dl = new Date(g.deadline);
-          const daysLeft = Math.ceil((dl - new Date()) / 86400000);
+          const daysLeft = Math.round((parseDateKey(g.deadline) - parseDateKey(dateKey())) / 86400000);
           deadlineStr = daysLeft > 0 ? `${daysLeft} дней осталось` : daysLeft === 0 ? 'Сегодня дедлайн!' : 'Дедлайн прошёл';
         }
 
         return `<div class="goal-card" style="animation-delay:${idx * 0.08}s">
       <div style="position:absolute;top:0;left:0;right:0;height:3px;border-radius:${20}px ${20}px 0 0;background:${color}"></div>
       <div class="goal-header">
-        <div class="goal-emoji">${g.emoji}</div>
+        <div class="goal-emoji">${escapeHtml(g.emoji)}</div>
         <div class="goal-info">
-          <div class="goal-name">${g.name}</div>
+          <div class="goal-name">${escapeHtml(g.name)}</div>
           ${deadlineStr ? `<div class="goal-deadline">⏰ ${deadlineStr}</div>` : ''}
         </div>
         <button class="goal-del" onclick="deleteGoal('${g.id}')">✕</button>
@@ -5033,7 +5011,7 @@
     function depositGoal(id) {
       const input = document.getElementById('dep-' + id);
       const amount = parseFloat(input.value) || 0;
-      if (!amount || amount <= 0) { showToast('Введите сумму ❌', 'error'); return; }
+      if (!(amount > 0) || !isFinite(amount)) { showToast('Введите сумму ❌', 'error'); return; }
       const goal = goalsData.find(g => g.id === id);
       if (!goal) return;
       goal.saved = Math.min(goal.saved + amount, goal.target);
@@ -5106,13 +5084,15 @@
       if (!tx) return;
 
       const amount = parseFloat(document.getElementById('editAmount').value);
-      if (!amount || amount <= 0) { showToast('Введите сумму ❌', 'error'); return; }
+      if (!(amount > 0) || !isFinite(amount)) { showToast('Введите сумму ❌', 'error'); return; }
+
+      const date = document.getElementById('editDate').value;
+      if (!isDateKey(date)) { showToast('Укажите дату ❌', 'error'); return; }
 
       tx.amount = amount;
       tx.name = document.getElementById('editName').value.trim() || tx.name;
-      tx.date = document.getElementById('editDate').value;
+      tx.date = date;
       tx.note = document.getElementById('editNote').value.trim();
-      tx.synced = false;
 
       if (tx.type === 'expense') {
         const selected = document.querySelector('#editCatGrid .cat-chip.selected');
@@ -5122,7 +5102,7 @@
         }
       }
 
-      saveData();
+      persistTx({ [tx.id]: tx });
       refreshAll();
       renderHistory();
       closeModalDirect();
@@ -5146,6 +5126,73 @@
       return Math.round(n).toLocaleString('ru-RU');
     }
 
+    const AVATAR_FALLBACK = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%237c6dfa'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
+
+    // Every user-provided string that goes into innerHTML must pass through this
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+    }
+
+    function pad2(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    // Local-time YYYY-MM-DD (toISOString() is UTC and shifts the day near midnight)
+    function dateKey(d = new Date()) {
+      return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    }
+
+    function isDateKey(s) {
+      return /^\d{4}-\d{2}-\d{2}$/.test(s || '');
+    }
+
+    function parseDateKey(s) {
+      const [y, m, d] = String(s).split('-').map(Number);
+      return new Date(y, (m || 1) - 1, d || 1);
+    }
+
+    function newId() {
+      return Date.now().toString() + '_' + Math.random().toString(36).slice(2, 6);
+    }
+
+    function compareTx(a, b) {
+      return b.date.localeCompare(a.date) || String(b.id).localeCompare(String(a.id));
+    }
+
+    // Validates a transaction coming from cache, Firebase or an imported file
+    function normalizeTx(t) {
+      if (!t || typeof t !== 'object') return null;
+      const amount = Math.abs(parseFloat(t.amount));
+      if (!isFinite(amount) || amount === 0) return null;
+      const type = t.type === 'income' ? 'income' : 'expense';
+      let category = CATS.some(c => c.id === t.category) ? t.category : 'other';
+      if (type === 'income') category = 'income';
+      else if (category === 'income') category = 'other';
+      return {
+        ...t,
+        // ids are used as Firebase keys and inside HTML attributes
+        id: String(t.id ?? '').replace(/[^\w-]/g, '') || newId(),
+        amount, type, category,
+        date: isDateKey(t.date) ? t.date : dateKey(),
+        name: String(t.name ?? '').trim() || 'Без названия',
+        note: String(t.note ?? '')
+      };
+    }
+
+    function normalizeTxList(list) {
+      const seen = new Set();
+      return (Array.isArray(list) ? list : []).map(normalizeTx).filter(Boolean).map(t => {
+        if (seen.has(t.id)) t.id = newId();
+        seen.add(t.id);
+        return t;
+      });
+    }
+
+    function txSignature(list) {
+      return list.map(t => [t.id, t.amount, t.date, t.name, t.category, t.type, t.note || ''].join('|')).sort().join('\n');
+    }
+
     function animateNumber(id, target) {
       const el = document.getElementById(id);
       const start = parseFloat(el.textContent.replace(/\s/g, '')) || 0;
@@ -5161,11 +5208,14 @@
       requestAnimationFrame(step);
     }
 
+    let _toastTimer = null;
     function showToast(msg, type = 'success') {
       const t = document.getElementById('toast');
       t.textContent = msg;
       t.className = 'toast show ' + type;
-      setTimeout(() => t.classList.remove('show'), 2500);
+      // A previous toast's timer must not hide the new one early
+      clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
     }
 
     // ==============================
@@ -5182,20 +5232,47 @@
       return JSON.parse(JSON.stringify(obj, (key, val) => val === undefined ? null : val));
     }
 
+    function txMap(list) {
+      const map = {};
+      list.forEach(t => { map[t.id] = t; });
+      return map;
+    }
+
+    // Transactions are stored as { id: tx } and written per item, so two devices
+    // editing at the same time no longer overwrite each other's records.
+    // changes: { id: tx | null (delete) }
+    async function persistTx(changes) {
+      lsSet('expenses_data', data);
+      if (!currentUser || !window._fbUpdate || !Object.keys(changes).length) return;
+      try {
+        await window._fbUpdate(window._fbRef(window._fbDb, userPath('transactions')), cleanForFirebase(changes));
+      } catch (e) {
+        console.warn('RTDB tx save error:', e);
+        showToast('Не удалось сохранить в облако', 'error');
+      }
+    }
+
+    async function saveSubs() {
+      lsSet('expenses_data', data);
+      if (!currentUser || !window._fbSet) return;
+      try {
+        await window._fbSet(window._fbRef(window._fbDb, userPath('subscriptions')), cleanForFirebase(data.subscriptions || []));
+      } catch (e) { console.warn('RTDB subscriptions save error:', e); }
+    }
+
+    // Full overwrite — only for "clear all data"
     async function saveData() {
       lsSet('expenses_data', data);
-      if (currentUser && window._fbSet) {
-        try {
-          const cleanTx = cleanForFirebase(data.transactions || []);
-          const cleanSub = cleanForFirebase(data.subscriptions || []);
-          await window._fbSet(window._fbRef(window._fbDb, userPath('transactions')), cleanTx);
-          await window._fbSet(window._fbRef(window._fbDb, userPath('subscriptions')), cleanSub);
-        } catch (e) { console.warn('RTDB save error:', e); }
-      }
+      if (!currentUser || !window._fbSet) return;
+      try {
+        await window._fbSet(window._fbRef(window._fbDb, userPath('transactions')), cleanForFirebase(txMap(data.transactions)));
+        await window._fbSet(window._fbRef(window._fbDb, userPath('subscriptions')), cleanForFirebase(data.subscriptions || []));
+      } catch (e) { console.warn('RTDB save error:', e); }
     }
 
     // Real-time listener reference for cleanup
     let _unsubscribe = null; // Firebase onValue unsubscribe function
+    let _migratedToMap = false;
 
     async function waitForFirebase() {
       // Wait up to 5s for Firebase module to load
@@ -5206,20 +5283,23 @@
       return false;
     }
 
-    async function loadFromDB() {
-      if (!currentUser) return;
-
-      // Show cached data instantly
-      const cachedData = lsGet('expenses_data', '{"transactions":[]}');
-      if (cachedData && cachedData.transactions) {
-        data = cachedData;
-        refreshAll();
-      }
-      goalsData = lsGet('goals_data', '[]') || [];
+    // Instant render from the per-user localStorage cache
+    function loadCache() {
+      const cached = lsGet('expenses_data', '{"transactions":[]}') || {};
+      data = {
+        transactions: normalizeTxList(cached.transactions),
+        subscriptions: Array.isArray(cached.subscriptions) ? cached.subscriptions : []
+      };
+      const cachedGoals = lsGet('goals_data', '[]');
+      goalsData = Array.isArray(cachedGoals) ? cachedGoals : [];
       const cachedSettings = lsGet('expenses_settings', '{}');
-      if (cachedSettings && Object.keys(cachedSettings).length) {
+      if (cachedSettings && typeof cachedSettings === 'object') {
         settings = { ...settings, ...cachedSettings };
       }
+    }
+
+    async function loadFromDB() {
+      if (!currentUser) return;
 
       // Wait for Firebase to be ready
       const ready = await waitForFirebase();
@@ -5229,7 +5309,7 @@
         return;
       }
 
-      // Load settings + goals once
+      // Load settings + goals + subscriptions once
       try {
         const dbRef = window._fbRef(window._fbDb);
 
@@ -5243,8 +5323,12 @@
         if (goalsSnap.exists() && goalsSnap.val()) {
           const val = goalsSnap.val();
           goalsData = Array.isArray(val) ? val.filter(Boolean) : Object.values(val).filter(Boolean);
-          lsSet('goals_data', goalsData);
+        } else {
+          // Deleted on another device — don't resurrect goals from the local cache
+          goalsData = [];
         }
+        lsSet('goals_data', goalsData);
+
         const subSnap = await window._fbGet(window._fbChild(dbRef, userPath('subscriptions')));
         if (subSnap.exists() && subSnap.val()) {
           const val = subSnap.val();
@@ -5259,12 +5343,22 @@
 
       return new Promise((resolve) => {
         let firstLoad = true;
+        const uid = currentUser.uid;
         const txRef = window._fbRef(window._fbDb, userPath('transactions'));
 
         _unsubscribe = window._fbOnValue(txRef, (snap) => {
-          if (snap.exists() && snap.val() !== null) {
-            const val = snap.val();
-            data.transactions = (Array.isArray(val) ? val : Object.values(val)).filter(Boolean);
+          if (!currentUser || currentUser.uid !== uid) return;
+          const before = txSignature(data.transactions);
+          const val = snap.exists() ? snap.val() : null;
+          let isLegacyFormat = false;
+
+          if (val) {
+            const raw = Array.isArray(val) ? val : Object.values(val);
+            data.transactions = normalizeTxList(raw);
+            // Old format: a plain array, or keys that don't match tx ids
+            isLegacyFormat = Array.isArray(val) ||
+              data.transactions.length !== Object.keys(val).length ||
+              data.transactions.some(t => !Object.prototype.hasOwnProperty.call(val, t.id));
           } else {
             data.transactions = [];
           }
@@ -5272,11 +5366,19 @@
           refreshAll();
           renderHistory();
 
+          if (isLegacyFormat && !_migratedToMap) {
+            _migratedToMap = true;
+            console.log('Migrating transactions to id-keyed map');
+            window._fbSet(txRef, cleanForFirebase(txMap(data.transactions)))
+              .catch(e => console.warn('Migration error:', e));
+          }
+
           if (firstLoad) {
             firstLoad = false;
             console.log('✅ Synced:', data.transactions.length, 'transactions');
             resolve();
-          } else {
+          } else if (txSignature(data.transactions) !== before) {
+            // Local writes also fire onValue — only announce real remote changes
             showToast('🔄 Синхронизировано', 'success');
           }
         }, (err) => {
@@ -5306,6 +5408,7 @@
     }
 
     function refreshAll() {
+      data.transactions.sort(compareTx);
       renderHome();
       // Refresh plan tab if it's visible
       if (document.getElementById('tab-plan').classList.contains('active')) renderPlanTab();
@@ -5529,19 +5632,14 @@ ${catLines || 'нет данных по категориям'}
       const file = e.target.files[0];
       if (!file) return;
       // Try UTF-8 first, fallback to Windows-1251 for files from Google Sheets/Excel
+      e.target.value = ''; // allow picking the same file again
       let text;
+      const buf = await file.arrayBuffer();
       try {
-        const buf = await file.arrayBuffer();
-        // Try UTF-8
-        const utf8 = new TextDecoder('utf-8').decode(buf);
-        // If we see replacement chars (кракозябры) — try windows-1251
-        if (utf8.includes('â€') || utf8.includes('РЎ') || utf8.includes('Р°')) {
-          text = new TextDecoder('windows-1251').decode(buf);
-        } else {
-          text = utf8;
-        }
-      } catch (e) {
-        text = await file.text();
+        // Strict UTF-8 throws on invalid bytes -> the file is Windows-1251 (Excel on Windows)
+        text = new TextDecoder('utf-8', { fatal: true }).decode(buf);
+      } catch (err) {
+        text = new TextDecoder('windows-1251').decode(buf);
       }
       let imported = [];
 
@@ -5565,7 +5663,11 @@ ${catLines || 'нет данных по категориям'}
             const result = [];
             let cur = '', inQ = false;
             for (let i = 0; i < line.length; i++) {
-              if (line[i] === '"') { inQ = !inQ; continue; }
+              if (line[i] === '"') {
+                if (inQ && line[i + 1] === '"') { cur += '"'; i++; } // escaped quote ""
+                else inQ = !inQ;
+                continue;
+              }
               if (line[i] === delim && !inQ) { result.push(cur.trim()); cur = ''; continue; }
               cur += line[i];
             }
@@ -5630,7 +5732,7 @@ ${catLines || 'нет данных по категориям'}
               }
             }
             if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-              date = new Date().toISOString().split('T')[0];
+              date = dateKey();
             }
 
             const typeStr = typeRaw.toLowerCase();
@@ -5650,6 +5752,8 @@ ${catLines || 'нет данных по категориям'}
           console.log('CSV parsed:', imported.length, 'rows');
         }
 
+        imported = normalizeTxList(imported);
+
         if (!imported.length) {
           const msg = typeHint === 'csv'
             ? `CSV не распознан. Строк: ${text.split('\n').length}. Первая строка: "${text.split('\n')[0].slice(0, 80)}"`
@@ -5668,10 +5772,11 @@ ${catLines || 'нет данных по категориям'}
           return;
         }
 
-        data.transactions = [...data.transactions, ...newTxs]
-          .sort((a, b) => b.date > a.date ? 1 : -1);
+        const existingIds = new Set(data.transactions.map(t => t.id));
+        newTxs.forEach(t => { if (existingIds.has(t.id)) t.id = newId(); });
+        data.transactions = [...data.transactions, ...newTxs];
 
-        await saveData();
+        await persistTx(txMap(newTxs));
         refreshAll();
         renderHistory();
         showToast(`Импортировано ${newTxs.length} записей ✓`, 'success');
@@ -5680,16 +5785,13 @@ ${catLines || 'нет данных по категориям'}
         showToast('Ошибка импорта: ' + err.message, 'error');
         console.error('Import error:', err);
       }
-
-      // Reset file input
-      e.target.value = '';
     }
 
     function exportData() {
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'expenses_' + new Date().toISOString().split('T')[0] + '.json';
+      a.download = 'expenses_' + dateKey() + '.json';
       a.click();
     }
 
@@ -5713,7 +5815,7 @@ ${catLines || 'нет данных по категориям'}
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'expenses_' + new Date().toISOString().split('T')[0] + '.csv';
+      a.download = 'expenses_' + dateKey() + '.csv';
       a.click();
       showToast('CSV скачан ✓', 'success');
     }
@@ -5806,14 +5908,14 @@ ${catLines || 'нет данных по категориям'}
       const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'expenses_' + new Date().toISOString().split('T')[0] + '.xls';
+      a.download = 'expenses_' + dateKey() + '.xls';
       a.click();
       showToast('Excel скачан ✓', 'success');
     }
 
     async function clearData() {
       if (confirm('Удалить все записи? Это действие нельзя отменить.')) {
-        data = { transactions: [] };
+        data = { transactions: [], subscriptions: data.subscriptions || [] };
         goalsData = [];
         await saveData();
         saveGoalsData();
@@ -5917,7 +6019,7 @@ ${catLines || 'нет данных по категориям'}
       const sumThis = txThis.reduce((s, t) => s + t.amount, 0);
       const sumPrev = txPrev.reduce((s, t) => s + t.amount, 0);
 
-      const today = now.toISOString().split('T')[0];
+      const today = dateKey(now);
       const todayTxs = data.transactions.filter(t => t.date === today && t.type === 'expense');
       const todaySum = todayTxs.reduce((s, t) => s + t.amount, 0);
 
@@ -6146,7 +6248,7 @@ ${catLines || 'нет данных по категориям'}
       // Top single expense
       const topTx = [...txThis].sort((a, b) => b.amount - a.amount)[0];
 
-      const today = now.toISOString().split('T')[0];
+      const today = dateKey(now);
       const todaySum = data.transactions.filter(t => t.date === today && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
       const cur = CUR();
@@ -6196,7 +6298,7 @@ ${topTx ? `\nСамая крупная трата: ${topTx.name} — ${formatNum
       document.getElementById('subModal').style.display = 'flex';
       renderSubs();
       const catSel = document.getElementById('subCat');
-      catSel.innerHTML = CATS.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
+      catSel.innerHTML = CATS.filter(c => c.id !== 'income').map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
     }
     function closeSubModal() {
       document.getElementById('subModal').style.display = 'none';
@@ -6212,8 +6314,8 @@ ${topTx ? `\nСамая крупная трата: ${topTx.name} — ${formatNum
         return `<div style="display:flex;align-items:center;background:var(--surface2);padding:10px 14px;border-radius:12px;gap:10px;border:1px solid var(--border)">
       <div style="font-size:20px;width:32px;height:32px;border-radius:8px;background:${cat.color}22;display:flex;align-items:center;justify-content:center">${cat.icon}</div>
       <div style="flex:1">
-        <div style="font-size:14px;font-weight:600">${s.name}</div>
-        <div style="font-size:11px;color:var(--text2)">Каждое ${s.day}-е число</div>
+        <div style="font-size:14px;font-weight:600">${escapeHtml(s.name)}</div>
+        <div style="font-size:11px;color:var(--text2)">Каждое ${escapeHtml(s.day)}-е число</div>
       </div>
       <div style="font-size:14px;font-weight:700;color:var(--accent2)">${formatNum(s.amount)} ${CUR()}</div>
       <button onclick="deleteSub('${s.id}')" style="background:none;border:none;color:var(--text2);font-size:16px;cursor:pointer;padding:4px">✕</button>
@@ -6237,7 +6339,7 @@ ${topTx ? `\nСамая крупная трата: ${topTx.name} — ${formatNum
         lastProcessedMonth: null
       });
 
-      saveData();
+      saveSubs();
       renderSubs();
       document.getElementById('subName').value = '';
       document.getElementById('subAmount').value = '';
@@ -6248,36 +6350,44 @@ ${topTx ? `\nСамая крупная трата: ${topTx.name} — ${formatNum
     function deleteSub(id) {
       if (!confirm('Удалить регулярный платеж?')) return;
       data.subscriptions = data.subscriptions.filter(s => s.id !== id);
-      saveData();
+      saveSubs();
       renderSubs();
       showToast('Удалено', 'error');
     }
     function processSubscriptions() {
       if (!data.subscriptions || data.subscriptions.length === 0) return;
       const now = new Date();
-      const cm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      let added = false;
+      const cm = dateKey(now).slice(0, 7);
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const changes = {};
+      let subsChanged = false;
 
       data.subscriptions.forEach(sub => {
-        if (now.getDate() >= sub.day && sub.lastProcessedMonth !== cm) {
-          data.transactions.push({
-            id: 'tx_sub_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4),
+        // A payment on the 29th–31st falls back to the last day of shorter months
+        const day = Math.min(Math.max(parseInt(sub.day) || 1, 1), daysInMonth);
+        if (now.getDate() < day || sub.lastProcessedMonth === cm) return;
+
+        // Deterministic id: two devices processing the same month write the same record
+        const id = `tx_sub_${String(sub.id).replace(/[^\w-]/g, '')}_${cm}`;
+        if (!data.transactions.some(t => t.id === id)) {
+          const tx = normalizeTx({
+            id,
             type: 'expense',
-            amount: parseFloat(sub.amount),
+            amount: sub.amount,
             category: sub.category,
             name: sub.name,
-            date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(sub.day).padStart(2, '0')}`,
+            date: `${cm}-${pad2(day)}`,
             note: 'Автоплатеж (Подписка)'
           });
-          sub.lastProcessedMonth = cm;
-          added = true;
+          if (tx) { data.transactions.push(tx); changes[id] = tx; }
         }
+        sub.lastProcessedMonth = cm;
+        subsChanged = true;
       });
 
-      if (added) {
-        // Save to RTDB and Refresh UI automatically via _onValue listener (since we mutate data.transactions. Wait, _fbSet triggers onValue which pushes to data.transactions. 
-        // It's safer to just saveData() here.
-        saveData();
+      if (subsChanged) saveSubs();
+      if (Object.keys(changes).length) {
+        persistTx(changes);
         refreshAll();
         showToast('Сработали регулярные платежи 🔄', 'success');
       }
@@ -6289,6 +6399,8 @@ ${topTx ? `\nСамая крупная трата: ${topTx.name} — ${formatNum
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', async () => {
         try {
+          // On the very first install clients.claim() also fires controllerchange — don't reload then
+          const hadController = !!navigator.serviceWorker.controller;
           const reg = await navigator.serviceWorker.register('sw.js');
 
           // When a new SW is found — activate it immediately
@@ -6305,7 +6417,7 @@ ${topTx ? `\nСамая крупная трата: ${topTx.name} — ${formatNum
           // Reload once new SW has taken control
           let refreshing = false;
           navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (!refreshing) { refreshing = true; window.location.reload(); }
+            if (hadController && !refreshing) { refreshing = true; window.location.reload(); }
           });
 
           // Force check for update every time page loads
