@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rashody-v20260317';
+const CACHE_NAME = 'rashody-v20260915';
 
 self.addEventListener('message', e => {
   if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
@@ -8,7 +8,7 @@ self.addEventListener('install', e => {
   self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache =>
-      cache.addAll(['./', './index.html', './manifest.json']).catch(() => {})
+      cache.addAll(['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png']).catch(() => {})
     )
   );
 });
@@ -20,6 +20,12 @@ self.addEventListener('activate', e => {
     ).then(() => self.clients.claim())
   );
 });
+
+function putInCache(request, response) {
+  // Clone synchronously: the original body is consumed by the page right away
+  const copy = response.clone();
+  caches.open(CACHE_NAME).then(c => c.put(request, copy));
+}
 
 self.addEventListener('fetch', e => {
   // Skip non-GET requests — POST/PUT cannot be cached
@@ -41,22 +47,26 @@ self.addEventListener('fetch', e => {
     e.respondWith(
       fetch(e.request)
         .then(res => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+          if (res.ok) putInCache(e.request, res);
           return res;
         })
-        .catch(() => caches.match('./index.html'))
+        .catch(() => caches.match(e.request).then(r => r || caches.match('./index.html')))
     );
     return;
   }
 
-  // Cache-first for static assets
+  // Stale-while-revalidate for static assets (incl. Firebase SDK from gstatic)
   e.respondWith(
     caches.match(e.request).then(cached => {
-      const net = fetch(e.request).then(res => {
-        if (res.ok) caches.open(CACHE_NAME).then(c => c.put(e.request, res.clone()));
-        return res;
-      });
+      const net = fetch(e.request)
+        .then(res => {
+          if (res.ok) putInCache(e.request, res);
+          return res;
+        })
+        .catch(err => {
+          if (cached) return cached;
+          throw err;
+        });
       return cached || net;
     })
   );
