@@ -1,4 +1,6 @@
-const CACHE_NAME = 'rashody-v20260915';
+// Bump VERSION on every release — it must match the ?v= in index.html
+const VERSION = '20260916';
+const CACHE_NAME = 'rashody-v' + VERSION;
 
 self.addEventListener('message', e => {
   if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
@@ -8,7 +10,11 @@ self.addEventListener('install', e => {
   self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache =>
-      cache.addAll(['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png']).catch(() => {})
+      cache.addAll([
+        './', './index.html',
+        `./styles.css?v=${VERSION}`, `./app.js?v=${VERSION}`, `./firebase-init.js?v=${VERSION}`,
+        './manifest.json', './icon-192.png', './icon-512.png'
+      ]).catch(() => {})
     )
   );
 });
