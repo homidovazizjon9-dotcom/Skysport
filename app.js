@@ -4160,10 +4160,11 @@ const AI_PROVIDERS = {
 let _aiEndpoint = null;
 
 // Ключи провайдеров узнаваемы с первого взгляда, так что перепутанный узел
-// в базе не отправит запрос не туда
+// в базе не отправит запрос не туда.
+// Google выдаёт ключи вида AQ.…, AIza… — прежний формат, он ещё живой.
 function providerFromKey(key) {
   const value = String(key || '');
-  if (/^AIza[\w-]{10,}$/.test(value)) return 'gemini';
+  if (/^(AQ\.|AIza)[\w.-]{10,}$/.test(value)) return 'gemini';
   if (/^gsk_[\w-]{10,}$/.test(value)) return 'groq';
   return null;
 }
@@ -4239,8 +4240,8 @@ async function aiRequest(body) {
   if (json.error) {
     const message = json.error.message || ('HTTP ' + res.status);
     if (/api[_ -]?key/i.test(message) && !ep.proxy && !providerFromKey(ep.key)) {
-      throw new Error('Ключ не похож на ключ ' + ep.provider.label +
-        '. Для Gemini он начинается с AIza — возьмите его на aistudio.google.com/apikey');
+      throw new Error('Провайдер не принял ключ. Проверьте config/aiKey: ключ Gemini ' +
+        'начинается с AQ. или AIza и берётся на aistudio.google.com/apikey');
     }
     throw new Error(message);
   }

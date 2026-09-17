@@ -69,17 +69,22 @@ const reset = config => {
 
     // ---------- один config/aiKey без подсказок: провайдер по форме ключа
     const geminiLike = 'AIzaSyD-ExampleKeyForTests123456789012';
+    const googleKey = 'AQ.Ab8RN6IExampleKeyForTests1234567890';
     const groqLike = 'gsk_ExampleKeyForTests1234567890';
 
     reset({ 'config/aiKey': geminiLike });
     ep = await getAiEndpoint();
-    ok('lone aiKey defaults to gemini', ep.name === 'gemini' && ep.key === geminiLike, ep.name);
+    ok('legacy AIza key still goes to gemini', ep.name === 'gemini' && ep.key === geminiLike, ep.name);
 
     reset({ 'config/aiKey': groqLike });
     ep = await getAiEndpoint();
     ok('groq-shaped key goes to groq', ep.name === 'groq', ep.name);
 
-    reset({ 'config/aiKey': 'AQ.Ab8RN6-непонятныйтокен' });
+    reset({ 'config/aiKey': 'AQ.Ab8RN6IExampleKeyForTests1234567890' });
+    ep = await getAiEndpoint();
+    ok('new google key format goes to gemini', ep.name === 'gemini', ep.name);
+
+    reset({ 'config/aiKey': 'какая-то строка' });
     ep = await getAiEndpoint();
     ok('unknown key shape defaults to gemini', ep.name === 'gemini', ep.name);
 
@@ -92,13 +97,13 @@ const reset = config => {
     ok('old lone groqKey still means groq', ep.name === 'groq');
 
     // ---------- чужой ключ объясняют по-человечески
-    reset({ 'config/aiKey': 'AQ.Ab8RN6-непонятныйтокен' });
+    reset({ 'config/aiKey': 'какая-то строка' });
     window.fetch = async () => ({ json: async () => ({ error: { message: 'Invalid API Key' } }) });
     let keyErr = '';
     try { await callAi('привет'); } catch (e) { keyErr = e.message; }
-    ok('wrong key shape is explained', keyErr.includes('AIza'), keyErr);
+    ok('wrong key shape is explained', keyErr.includes('config/aiKey'), keyErr);
 
-    reset({ 'config/aiKey': geminiLike });
+    reset({ 'config/aiKey': googleKey });
     keyErr = '';
     try { await callAi('привет'); } catch (e) { keyErr = e.message; }
     ok('right shape keeps the original error', keyErr === 'Invalid API Key', keyErr);
