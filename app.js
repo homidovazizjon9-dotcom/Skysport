@@ -1196,7 +1196,7 @@ async function readReceiptPhoto(dataUrl) {
       { type: 'text', text: prompt },
       { type: 'image_url', image_url: { url: dataUrl } }
     ]
-  }], 300, 0);
+  }], 800, 0);
 }
 
 // The model sometimes wraps the JSON in a sentence or a code fence
@@ -4145,8 +4145,12 @@ const AI_PROVIDERS = {
     label: 'Gemini',
     url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
     keyPath: 'config/geminiKey',
-    text: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'],
-    vision: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest']
+    // 2.0 без «размышления» и отвечает сразу, поэтому она первая
+    text: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-flash-latest'],
+    vision: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-flash-latest'],
+    // 2.5 тратит бюджет ответа на внутренние рассуждения и возвращает пустой
+    // текст. reasoning_effort: 'none' выключает их; для 2.0 поле лишнее.
+    tune: model => (/2\.5|latest/.test(model) ? { reasoning_effort: 'none' } : {})
   },
   groq: {
     label: 'Groq',
@@ -4253,13 +4257,19 @@ async function aiComplete(kind, messages, maxTokens, temperature) {
   const ep = await getAiEndpoint();
   if (!ep) throw new Error('Нет ключа для ИИ. Проверь Firebase: config/aiKey или config/aiProxy');
   const models = ep.provider[kind] || [];
+  const tune = ep.provider.tune || (() => ({}));
   let lastErr = null;
   for (const model of models) {
     try {
-      const json = await aiRequest({ model, messages, max_tokens: maxTokens, temperature });
-      const text = json.choices && json.choices[0] && json.choices[0].message.content;
+      const json = await aiRequest({
+        model, messages, max_tokens: maxTokens, temperature, ...tune(model)
+      });
+      const choice = json.choices && json.choices[0];
+      const text = choice && choice.message && choice.message.content;
       if (text) return text;
-      lastErr = new Error('Пустой ответ модели');
+      // Причина пустоты важна: length — не хватило max_tokens, остальное — фильтры
+      lastErr = new Error('Пустой ответ модели ' + model +
+        (choice && choice.finish_reason ? ' (' + choice.finish_reason + ')' : ''));
     } catch (e) {
       // «model does not exist» — просто пробуем следующую
       lastErr = e;
@@ -4273,7 +4283,7 @@ async function callAi(prompt) {
   return aiComplete('text', [
     { role: 'system', content: 'Ты финансовый помощник. Отвечай кратко, по-русски, без markdown.' },
     { role: 'user', content: prompt }
-  ], 400, 0.7);
+  ], 1500, 0.7);
 }
 
 function renderAiTab() {

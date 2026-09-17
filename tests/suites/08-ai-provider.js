@@ -24,7 +24,8 @@ let sentModels = [];
 let failFirst = 0;
 const stubFetch = async (url, opts) => {
   const body = JSON.parse(opts.body);
-  sentModels.push({ url, model: body.model, auth: opts.headers.Authorization });
+  sentModels.push({ url, model: body.model, auth: opts.headers.Authorization,
+    reasoning: body.reasoning_effort, maxTokens: body.max_tokens });
   if (sentModels.length <= failFirst) {
     return { json: async () => ({ error: { message: 'The model `' + body.model + '` does not exist' } }) };
   }
@@ -148,6 +149,28 @@ const reset = config => {
     try { await callAi('привет'); } catch (e) { err = e.message; }
     ok('all models down reports the last error', err.includes('does not exist'), err);
     ok('every model was tried', sentModels.length === AI_PROVIDERS.gemini.text.length, sentModels.length);
+
+    // ---------- «думающие» модели просят не думать
+    reset({ 'config/aiKey': googleKey });
+    failFirst = 1;
+    await callAi('привет');
+    ok('non-thinking model tried first', sentModels[0].model === 'gemini-2.0-flash', sentModels[0].model);
+    ok('no reasoning flag for 2.0', sentModels[0].reasoning === undefined);
+    ok('thinking turned off for 2.5', sentModels[1].reasoning === 'none', String(sentModels[1].reasoning));
+    ok('answer has room to fit', sentModels[0].maxTokens >= 1000, sentModels[0].maxTokens);
+
+    // ---------- пустой ответ объясняет, почему он пустой
+    reset({ 'config/aiKey': googleKey });
+    window.fetch = async (url, opts) => {
+      sentModels.push({ model: JSON.parse(opts.body).model });
+      return { json: async () => ({ choices: [{ message: { content: '' }, finish_reason: 'length' }] }) };
+    };
+    let emptyErr = '';
+    try { await callAi('привет'); } catch (e) { emptyErr = e.message; }
+    ok('empty answer names the model', emptyErr.includes('gemini'), emptyErr);
+    ok('empty answer names the reason', emptyErr.includes('length'), emptyErr);
+    ok('all models tried before giving up', sentModels.length === AI_PROVIDERS.gemini.text.length);
+    window.fetch = stubFetch;
 
     // ---------- чек идёт к тем же моделям
     reset({ 'config/geminiKey': 'AIzaTest' });
