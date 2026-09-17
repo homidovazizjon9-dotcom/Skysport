@@ -588,7 +588,7 @@ window._onAuthReady = async (user) => {
 };
 
 // Видно в консоли: сразу ясно, свежий файл загрузился или из кэша
-const APP_VERSION = '20260918';
+const APP_VERSION = '20260919';
 
 function initApp() {
   // Reset AI text for new user session
@@ -4244,21 +4244,42 @@ async function aiRequest(body) {
     headers['Authorization'] = 'Bearer ' + ep.key;
   }
   const res = await fetch(ep.url, { method: 'POST', headers, body: JSON.stringify(body) });
-  const json = await res.json().catch(() => ({ error: { message: 'HTTP ' + res.status } }));
-  if (json.error) {
-    const message = json.error.message || ('HTTP ' + res.status);
+  // Сначала текстом: если это не JSON, покажем начало ответа, а не «пусто»
+  const raw = await res.text();
+  let json = null;
+  try { json = JSON.parse(raw); } catch (e) { /* ниже */ }
+
+  const failed = findError(json);
+  if (failed) {
+    const message = failed.message || ('HTTP ' + res.status);
     if (/api[_ -]?key/i.test(message) && !ep.proxy && !providerFromKey(ep.key)) {
       throw new Error('Провайдер не принял ключ. Проверьте config/aiKey: ключ Gemini ' +
         'начинается с AQ. или AIza и берётся на aistudio.google.com/apikey');
     }
     throw new Error(message);
   }
+  if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + raw.slice(0, 200));
+  if (json === null) throw new Error('Ответ не JSON: ' + raw.slice(0, 200));
   return json;
+}
+
+// Google иногда отвечает массивом — и ошибка тогда лежит внутри него
+function findError(json) {
+  if (!json) return null;
+  if (Array.isArray(json)) {
+    const failed = json.find(part => part && part.error);
+    return failed ? failed.error : null;
+  }
+  return json.error || null;
 }
 
 // Провайдеры отвечают в формате OpenAI, но на всякий случай понимаем
 // и родной формат Gemini: пустой экран без объяснений — худший исход
 function extractAnswer(json) {
+  if (Array.isArray(json)) {
+    // Потоковый ответ приходит кусками: собираем из всех
+    return json.map(part => extractAnswer(part)).join('').trim();
+  }
   const choice = json && json.choices && json.choices[0];
   const content = choice && choice.message && choice.message.content;
   if (typeof content === 'string' && content.trim()) return content;
@@ -4277,6 +4298,7 @@ function extractAnswer(json) {
 
 // Что именно пришло вместо текста — чтобы не гадать по пустому экрану
 function describeEmpty(model, json) {
+  if (Array.isArray(json)) return describeEmpty(model, json[0] || {});
   const choice = json && json.choices && json.choices[0];
   const candidate = json && json.candidates && json.candidates[0];
   const why = (choice && choice.finish_reason) ||
@@ -4292,7 +4314,9 @@ async function aiComplete(kind, messages, maxTokens, temperature) {
   if (!ep) throw new Error('Нет ключа для ИИ. Проверь Firebase: config/aiKey или config/aiProxy');
   const models = ep.provider[kind] || [];
   const tune = ep.provider.tune || (() => ({}));
-  let lastErr = null;
+  // Копим ответы всех моделей: иначе видно только последнюю, а сломаться
+  // могла первая — и по какой причине, остаётся загадкой
+  const failures = [];
   for (const model of models) {
     try {
       const json = await aiRequest({
@@ -4301,13 +4325,14 @@ async function aiComplete(kind, messages, maxTokens, temperature) {
       const text = extractAnswer(json);
       if (text) return text;
       // Причина пустоты важна: length — не хватило max_tokens, остальное — фильтры
-      lastErr = new Error(describeEmpty(model, json));
+      failures.push(describeEmpty(model, json));
     } catch (e) {
       // «model does not exist» — просто пробуем следующую
-      lastErr = e;
+      failures.push(model + ': ' + (e.message || 'ошибка'));
     }
   }
-  throw lastErr || new Error('Ни одна модель не ответила');
+  if (!failures.length) throw new Error('Ни одна модель не ответила');
+  throw new Error(failures.join(' | ').slice(0, 500));
 }
 
 async function callAi(prompt) {
