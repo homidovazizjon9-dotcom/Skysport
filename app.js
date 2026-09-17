@@ -588,7 +588,7 @@ window._onAuthReady = async (user) => {
 };
 
 // Видно в консоли: сразу ясно, свежий файл загрузился или из кэша
-const APP_VERSION = '20260924';
+const APP_VERSION = '20260925';
 
 function initApp() {
   // Reset AI text for new user session
@@ -4211,12 +4211,13 @@ const AI_PROVIDERS = {
     label: 'Gemini',
     url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
     keyPath: 'config/geminiKey',
-    // 2.0 без «размышления» и отвечает сразу, поэтому она первая
-    text: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-flash-latest'],
-    vision: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-flash-latest'],
-    // 2.5 тратит бюджет ответа на внутренние рассуждения и возвращает пустой
-    // текст. reasoning_effort: 'none' выключает их; для 2.0 поле лишнее.
-    tune: model => (/2\.5|latest/.test(model) ? { reasoning_effort: 'none' } : {}),
+    // Google снимает модели с публикации без предупреждения: 2.0 и 2.5 ушли
+    // осенью 2026-го. Новое имя дописывай сюда первым.
+    text: ['gemini-3.6-flash', 'gemini-flash-latest', 'gemini-2.5-flash'],
+    vision: ['gemini-3.6-flash', 'gemini-flash-latest', 'gemini-2.5-flash'],
+    // «Думающие» модели тратят бюджет ответа на рассуждения и отдают пустой
+    // текст. Выключаем заранее; если модель поле не знает, пробуем без него.
+    tune: () => ({ reasoning_effort: 'none' }),
     // Google принимает ключ заголовком x-goog-api-key или параметром ?key=,
     // а в Authorization ждёт OAuth-токен — ключ там отвергается
     authStyles: ['header', 'query', 'bearer']
@@ -4464,17 +4465,28 @@ async function aiComplete(kind, messages, maxTokens, temperature) {
       failures.push('ожидание прервано после ' + Math.round(AI_TOTAL_TIMEOUT / 1000) + ' с');
       break;
     }
-    try {
-      const json = await aiRequest({
-        model, messages, max_tokens: maxTokens, temperature, ...tune(model)
-      }, deadline);
-      const text = extractAnswer(json);
-      if (text) return text;
-      // Причина пустоты важна: length — не хватило max_tokens, остальное — фильтры
-      failures.push(describeEmpty(model, json));
-    } catch (e) {
-      // «model does not exist» — просто пробуем следующую
-      failures.push(model + ': ' + (e.message || 'ошибка'));
+    // Если модель промолчала, пробуем её же с другими настройками: обычно
+    // виновато «размышление», но у будущих моделей может быть наоборот
+    const variants = [tune(model)];
+    if (variants[0].reasoning_effort) variants.push({});
+    else variants.push({ reasoning_effort: 'none' });
+
+    let broken = false;
+    for (const extra of variants) {
+      if (broken || Date.now() >= deadline) break;
+      try {
+        const json = await aiRequest({
+          model, messages, max_tokens: maxTokens, temperature, ...extra
+        }, deadline);
+        const text = extractAnswer(json);
+        if (text) return text;
+        // Причина пустоты важна: length — не хватило max_tokens, остальное — фильтры
+        failures.push(describeEmpty(model, json));
+      } catch (e) {
+        // «model does not exist» — вторую настройку пробовать бессмысленно
+        failures.push(model + ': ' + (e.message || 'ошибка'));
+        broken = true;
+      }
     }
   }
   if (!failures.length) throw new Error('Ни одна модель не ответила');
