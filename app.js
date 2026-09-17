@@ -588,7 +588,7 @@ window._onAuthReady = async (user) => {
 };
 
 // Видно в консоли: сразу ясно, свежий файл загрузился или из кэша
-const APP_VERSION = '20260919';
+const APP_VERSION = '20260920';
 
 function initApp() {
   // Reset AI text for new user session
@@ -4154,14 +4154,18 @@ const AI_PROVIDERS = {
     vision: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-flash-latest'],
     // 2.5 тратит бюджет ответа на внутренние рассуждения и возвращает пустой
     // текст. reasoning_effort: 'none' выключает их; для 2.0 поле лишнее.
-    tune: model => (/2\.5|latest/.test(model) ? { reasoning_effort: 'none' } : {})
+    tune: model => (/2\.5|latest/.test(model) ? { reasoning_effort: 'none' } : {}),
+    // Google принимает ключ заголовком x-goog-api-key или параметром ?key=,
+    // а в Authorization ждёт OAuth-токен — ключ там отвергается
+    authStyles: ['header', 'query', 'bearer']
   },
   groq: {
     label: 'Groq',
     url: 'https://api.groq.com/openai/v1/chat/completions',
     keyPath: 'config/groqKey',
     text: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
-    vision: ['meta-llama/llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-maverick-17b-128e-instruct']
+    vision: ['meta-llama/llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-maverick-17b-128e-instruct'],
+    authStyles: ['bearer']
   }
 };
 
@@ -4232,32 +4236,61 @@ async function getAiEndpoint() {
 }
 
 // Всё, что говорит с моделью, идёт сюда
-async function aiRequest(body) {
-  const ep = await getAiEndpoint();
-  if (!ep) throw new Error('Нет ключа для ИИ. Проверь Firebase: config/aiKey или config/aiProxy');
+// Провайдеры расходятся в том, как предъявлять ключ; пробуем по очереди
+async function authorize(ep, style) {
   const headers = { 'Content-Type': 'application/json' };
+  let url = ep.url;
   if (ep.proxy) {
     // Прокси сам проверяет, кто зовёт, — ему нужен токен входа
     const token = currentUser && currentUser.getIdToken ? await currentUser.getIdToken() : '';
     if (token) headers['Authorization'] = 'Bearer ' + token;
+    return { url, headers };
+  }
+  if (style === 'header') {
+    headers['x-goog-api-key'] = ep.key;
+  } else if (style === 'query') {
+    url += (url.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(ep.key);
   } else {
     headers['Authorization'] = 'Bearer ' + ep.key;
   }
-  const res = await fetch(ep.url, { method: 'POST', headers, body: JSON.stringify(body) });
+  return { url, headers };
+}
+
+function isAuthProblem(message) {
+  return /auth|credential|api[_ -]?key|unauthor|401|403/i.test(String(message || ''));
+}
+
+async function aiRequest(body) {
+  const ep = await getAiEndpoint();
+  if (!ep) throw new Error('Нет ключа для ИИ. Проверь Firebase: config/aiKey или config/aiProxy');
+
+  // Способ, который уже сработал, запоминаем на сессию
+  const styles = ep.proxy ? ['proxy']
+    : (ep.authStyle ? [ep.authStyle] : (ep.provider.authStyles || ['bearer']));
+  let authErr = null;
+  for (const style of styles) {
+    try {
+      const answer = await aiSend(ep, style, body);
+      ep.authStyle = ep.proxy ? null : style;
+      return answer;
+    } catch (e) {
+      if (!isAuthProblem(e.message)) throw e;
+      authErr = e;
+    }
+  }
+  throw authErr || new Error('Провайдер не принял ключ');
+}
+
+async function aiSend(ep, style, body) {
+  const { url, headers } = await authorize(ep, style);
+  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
   // Сначала текстом: если это не JSON, покажем начало ответа, а не «пусто»
   const raw = await res.text();
   let json = null;
   try { json = JSON.parse(raw); } catch (e) { /* ниже */ }
 
   const failed = findError(json);
-  if (failed) {
-    const message = failed.message || ('HTTP ' + res.status);
-    if (/api[_ -]?key/i.test(message) && !ep.proxy && !providerFromKey(ep.key)) {
-      throw new Error('Провайдер не принял ключ. Проверьте config/aiKey: ключ Gemini ' +
-        'начинается с AQ. или AIza и берётся на aistudio.google.com/apikey');
-    }
-    throw new Error(message);
-  }
+  if (failed) throw new Error(failed.message || ('HTTP ' + res.status));
   if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + raw.slice(0, 200));
   if (json === null) throw new Error('Ответ не JSON: ' + raw.slice(0, 200));
   return json;
