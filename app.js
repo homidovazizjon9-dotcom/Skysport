@@ -150,8 +150,7 @@ function resetUserState() {
   debtsData = [];
   _pendingReceiptPhoto = null;
   settings = { initialBalance: 0, monthBudget: 0 };
-  _groqKey = null;
-  _groqEndpoint = null;
+  _aiEndpoint = null;
   compareMonthA = compareMonthB = selectedMonthForAnalytics = null;
   currentAccount = currentAccountTo = null;
   filterAccount = 'all';
@@ -592,9 +591,8 @@ function initApp() {
   // Reset AI text for new user session
   const aiEl = document.getElementById('aiText');
   if (aiEl) aiEl.textContent = 'Нажмите кнопку ниже, чтобы получить персональный анализ';
-  // Reset Groq caches so a new user gets a fresh key
-  _groqKey = null;
-  _groqEndpoint = null;
+  // Сбрасываем адрес ИИ: у нового пользователя может быть другой ключ
+  _aiEndpoint = null;
   hydrateIcons();
   updateOnlineState();
   renderCatGrid();
@@ -1094,15 +1092,6 @@ function startVoiceInput() {
 // on the receipt. A photo works in every browser: the file input opens the
 // camera or the gallery, and a vision model reads the total, date and shop.
 
-// Groq retires vision models often, so try them in order and keep the first
-// one that answers. Add new names to the front of this list.
-const VISION_MODELS = [
-  'meta-llama/llama-4-scout-17b-16e-instruct',
-  'meta-llama/llama-4-maverick-17b-128e-instruct',
-  'llama-3.2-90b-vision-preview',
-  'llama-3.2-11b-vision-preview'
-];
-
 let _receiptBusy = false;
 let _receiptCancelled = false;
 
@@ -1201,29 +1190,13 @@ async function readReceiptPhoto(dataUrl) {
     'category — один id из списка: ' + cats + '\n' +
     'Если чего-то не видно на фото — поставь null.';
 
-  let lastErr = null;
-  for (const model of VISION_MODELS) {
-    try {
-      const json = await groqRequest({
-        model,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: dataUrl } }
-          ]
-        }],
-        max_tokens: 300,
-        temperature: 0
-      });
-      const text = json.choices && json.choices[0] && json.choices[0].message.content;
-      if (text) return text;
-      lastErr = new Error('Пустой ответ модели');
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-  throw lastErr || new Error('Сервис распознавания не ответил');
+  return aiComplete('vision', [{
+    role: 'user',
+    content: [
+      { type: 'text', text: prompt },
+      { type: 'image_url', image_url: { url: dataUrl } }
+    ]
+  }], 300, 0);
 }
 
 // The model sometimes wraps the JSON in a sentence or a code fence
@@ -3637,7 +3610,7 @@ ${catLines || 'нет данных по категориям'}
 Дай практические советы: где нужно сократить, что идёт хорошо, и как распределить оставшийся бюджет до конца месяца.`;
 
   try {
-    const text = await callGroq(prompt);
+    const text = await callAi(prompt);
     textEl.textContent = text || 'Ответ не получен';
   } catch(e) {
     textEl.textContent = 'Ошибка: ' + e.message;
@@ -4160,22 +4133,42 @@ function applyTheme() {
 }
 
 // ==============================
-// GROQ AI
+// AI
 // ==============================
+// Провайдеры говорят на одном языке: у Gemini есть endpoint, совместимый
+// с OpenAI, поэтому запрос и ответ одинаковые — меняются только адрес и модели.
+//
+// Имена моделей у всех провайдеров живут недолго («model does not exist»),
+// поэтому список перебирается сверху вниз до первой ответившей.
+const AI_PROVIDERS = {
+  gemini: {
+    label: 'Gemini',
+    url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    keyPath: 'config/geminiKey',
+    text: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'],
+    vision: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest']
+  },
+  groq: {
+    label: 'Groq',
+    url: 'https://api.groq.com/openai/v1/chat/completions',
+    keyPath: 'config/groqKey',
+    text: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+    vision: ['meta-llama/llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-maverick-17b-128e-instruct']
+  }
+};
 
-// Two ways to reach Groq, in order of preference:
-//   config/groqProxy — сервер держит ключ у себя, приложение шлёт токен входа
-//   config/groqKey   — сам ключ, его видит любой вошедший пользователь
-let _groqKey = null;
-let _groqEndpoint = null;
+let _aiEndpoint = null;
 
-async function fbConfigValue(path) {
-  // Wait for Firebase to be ready
+async function fbReady() {
   for (let i = 0; i < 20; i++) {
-    if (window._fbGet && window._fbRef && window._fbDb) break;
+    if (window._fbGet && window._fbRef && window._fbDb) return true;
     await new Promise(r => setTimeout(r, 200));
   }
-  if (!window._fbGet || !window._fbRef || !window._fbDb) {
+  return false;
+}
+
+async function fbConfigValue(path) {
+  if (!(await fbReady())) {
     console.warn('Firebase not ready to read ' + path);
     return null;
   }
@@ -4188,33 +4181,43 @@ async function fbConfigValue(path) {
   }
 }
 
-async function getGroqKey() {
-  if (_groqKey) return _groqKey;
-  _groqKey = await fbConfigValue('config/groqKey');
-  if (!_groqKey) console.warn('Groq key not found at config/groqKey in Firebase');
-  return _groqKey;
-}
+// Что лежит в базе: aiProvider/aiKey/aiProxy, старые groqKey и groqProxy тоже понимаем
+async function getAiEndpoint() {
+  if (_aiEndpoint) return _aiEndpoint;
 
-async function getGroqEndpoint() {
-  if (_groqEndpoint) return _groqEndpoint;
-  const proxy = await fbConfigValue('config/groqProxy');
+  const [explicit, aiProxy, groqProxy, aiKey, geminiKey, groqKey] = await Promise.all([
+    fbConfigValue('config/aiProvider'),
+    fbConfigValue('config/aiProxy'),
+    fbConfigValue('config/groqProxy'),
+    fbConfigValue('config/aiKey'),
+    fbConfigValue('config/geminiKey'),
+    fbConfigValue('config/groqKey')
+  ]);
+
+  const asked = String(explicit || '').toLowerCase();
+  const name = AI_PROVIDERS[asked] ? asked : (geminiKey ? 'gemini' : 'groq');
+  const provider = AI_PROVIDERS[name];
+  const proxy = aiProxy || groqProxy;
+  const key = aiKey || (name === 'gemini' ? geminiKey : groqKey);
+
   if (typeof proxy === 'string' && /^https:\/\//.test(proxy)) {
-    _groqEndpoint = { url: proxy.trim(), proxy: true };
-    return _groqEndpoint;
+    _aiEndpoint = { name, provider, url: proxy.trim(), proxy: true };
+  } else if (key) {
+    _aiEndpoint = { name, provider, url: provider.url, key: String(key).trim() };
+  } else {
+    console.warn('AI key not found: положи ключ в config/aiKey или ' + provider.keyPath);
+    return null;
   }
-  const key = await getGroqKey();
-  if (!key) return null;
-  _groqEndpoint = { url: 'https://api.groq.com/openai/v1/chat/completions', key };
-  return _groqEndpoint;
+  return _aiEndpoint;
 }
 
-// Everything that talks to the model goes through here
-async function groqRequest(body) {
-  const ep = await getGroqEndpoint();
-  if (!ep) throw new Error('Нет ключа для ИИ. Проверь Firebase: config/groqProxy или config/groqKey');
+// Всё, что говорит с моделью, идёт сюда
+async function aiRequest(body) {
+  const ep = await getAiEndpoint();
+  if (!ep) throw new Error('Нет ключа для ИИ. Проверь Firebase: config/aiKey или config/aiProxy');
   const headers = { 'Content-Type': 'application/json' };
   if (ep.proxy) {
-    // The proxy checks who is calling, so it needs the sign-in token
+    // Прокси сам проверяет, кто зовёт, — ему нужен токен входа
     const token = currentUser && currentUser.getIdToken ? await currentUser.getIdToken() : '';
     if (token) headers['Authorization'] = 'Bearer ' + token;
   } else {
@@ -4226,18 +4229,32 @@ async function groqRequest(body) {
   return json;
 }
 
-async function callGroq(prompt) {
-  // Each call is completely fresh — no history
-  const json = await groqRequest({
-    model: 'llama-3.1-8b-instant',
-    messages: [
-      { role: 'system', content: 'Ты финансовый помощник. Отвечай кратко, по-русски, без markdown.' },
-      { role: 'user', content: prompt }
-    ],
-    max_tokens: 400,
-    temperature: 0.7
-  });
-  return json.choices?.[0]?.message?.content || '';
+// Перебирает модели провайдера, пока одна не ответит
+async function aiComplete(kind, messages, maxTokens, temperature) {
+  const ep = await getAiEndpoint();
+  if (!ep) throw new Error('Нет ключа для ИИ. Проверь Firebase: config/aiKey или config/aiProxy');
+  const models = ep.provider[kind] || [];
+  let lastErr = null;
+  for (const model of models) {
+    try {
+      const json = await aiRequest({ model, messages, max_tokens: maxTokens, temperature });
+      const text = json.choices && json.choices[0] && json.choices[0].message.content;
+      if (text) return text;
+      lastErr = new Error('Пустой ответ модели');
+    } catch (e) {
+      // «model does not exist» — просто пробуем следующую
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('Ни одна модель не ответила');
+}
+
+async function callAi(prompt) {
+  // Каждый вызов начинается с чистого листа — истории нет
+  return aiComplete('text', [
+    { role: 'system', content: 'Ты финансовый помощник. Отвечай кратко, по-русски, без markdown.' },
+    { role: 'user', content: prompt }
+  ], 400, 0.7);
 }
 
 function renderAiTab() {
@@ -4348,7 +4365,7 @@ ${topTx ? `\nСамая крупная трата: ${topTx.name} — ${formatNum
   }
 
   try {
-    const text = await callGroq(prompt);
+    const text = await callAi(prompt);
     el.textContent = text || 'Нет ответа';
     const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
     const timeEl = document.getElementById('aiLoadTime');
