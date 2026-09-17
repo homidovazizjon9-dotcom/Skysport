@@ -20,16 +20,19 @@ window._fbGet = async path => ({
 });
 
 const realFetch = window.fetch;
+// Заглушка ответа: приложение читает тело текстом, как настоящий fetch
+const reply = (obj, status) => ({ ok: (status || 200) < 400, status: status || 200, text: async () => JSON.stringify(obj) });
 let sentModels = [];
 let failFirst = 0;
 const stubFetch = async (url, opts) => {
   const body = JSON.parse(opts.body);
   sentModels.push({ url, model: body.model, auth: opts.headers.Authorization,
+    googKey: opts.headers['x-goog-api-key'],
     reasoning: body.reasoning_effort, maxTokens: body.max_tokens });
   if (sentModels.length <= failFirst) {
-    return { json: async () => ({ error: { message: 'The model `' + body.model + '` does not exist' } }) };
+    return reply({ error: { message: 'The model `' + body.model + '` does not exist' } });
   }
-  return { json: async () => ({ choices: [{ message: { content: 'готовый ответ' } }] }) };
+  return reply({ choices: [{ message: { content: 'готовый ответ' } }] });
 };
 window.fetch = stubFetch;
 
@@ -97,17 +100,105 @@ const reset = config => {
     ep = await getAiEndpoint();
     ok('old lone groqKey still means groq', ep.name === 'groq');
 
-    // ---------- чужой ключ объясняют по-человечески
-    reset({ 'config/aiKey': 'какая-то строка' });
-    window.fetch = async () => ({ json: async () => ({ error: { message: 'Invalid API Key' } }) });
+    // ---------- ошибку провайдера показываем как есть
+    reset({ 'config/aiKey': googleKey });
+    window.fetch = async () => reply({ error: { message: 'Invalid API Key' } });
     let keyErr = '';
     try { await callAi('привет'); } catch (e) { keyErr = e.message; }
-    ok('wrong key shape is explained', keyErr.includes('config/aiKey'), keyErr);
+    ok('provider message passed through', keyErr.includes('Invalid API Key'), keyErr);
+
+    // ---------- способ передачи ключа подбирается сам
+    reset({ 'config/aiKey': googleKey });
+    const styles = [];
+    window.fetch = async (url, opts) => {
+      const style = opts.headers['x-goog-api-key'] ? 'header'
+        : url.includes('key=') ? 'query' : 'bearer';
+      styles.push(style);
+      if (style !== 'query') {
+        return reply({ error: { message: 'Request had invalid authentication credentials' } }, 401);
+      }
+      return reply({ choices: [{ message: { content: 'подошло' } }] });
+    };
+    ok('auth style is found by trying', (await callAi('привет')) === 'подошло', styles.join(','));
+    ok('header tried before the query', styles[0] === 'header' && styles[1] === 'query');
+    const soFar = styles.length;
+    await callAi('ещё раз');
+    ok('working style is remembered', styles.length === soFar + 1 && styles[soFar] === 'query', styles.join(','));
+
+    // ---------- в ошибке видно, какие способы перепробованы
+    reset({ 'config/aiKey': googleKey });
+    window.fetch = async () => reply({ error: { message: 'Request had invalid authentication credentials' } }, 401);
+    let authErr = '';
+    try { await callAi('привет'); } catch (e) { authErr = e.message; }
+    ok('tried styles listed', authErr.includes('header>query>bearer'), authErr);
+
+    // ---------- частые ответы провайдера переводятся
+    reset({ 'config/aiKey': googleKey });
+    window.fetch = async () => reply({ error: {
+      message: 'Request had invalid authentication credentials. Expected OAuth 2 access token',
+      status: 'UNAUTHENTICATED'
+    } }, 401);
+    let hinted = '';
+    try { await callAi('привет'); } catch (e) { hinted = e.message; }
+    ok('access token explained', hinted.includes('токен доступа') && hinted.includes('aistudio'), hinted);
+    ok('original answer kept', hinted.includes('Ответ сервиса'), hinted);
 
     reset({ 'config/aiKey': googleKey });
-    keyErr = '';
-    try { await callAi('привет'); } catch (e) { keyErr = e.message; }
-    ok('right shape keeps the original error', keyErr === 'Invalid API Key', keyErr);
+    window.fetch = async () => reply({ error: { message: 'API key not valid. Please pass a valid API key.' } }, 400);
+    try { await callAi('привет'); } catch (e) { hinted = e.message; }
+    ok('invalid key explained', hinted.includes('Ключ не принят'), hinted);
+
+    reset({ 'config/aiKey': googleKey });
+    window.fetch = async () => reply({ error: { message: 'Generative Language API has not been used in project 123 before or it is disabled' } }, 403);
+    try { await callAi('привет'); } catch (e) { hinted = e.message; }
+    ok('disabled api explained', hinted.includes('не включён'), hinted);
+
+    reset({ 'config/aiKey': googleKey });
+    window.fetch = async () => reply({ error: { message: 'Что-то совсем неизвестное' } }, 500);
+    try { await callAi('привет'); } catch (e) { hinted = e.message; }
+    ok('unknown error passed through', hinted.includes('Что-то совсем неизвестное'), hinted);
+    window.fetch = stubFetch;
+
+    // ---------- сеть и CORS не притворяются ошибкой ключа
+    reset({ 'config/aiKey': googleKey });
+    window.fetch = async () => { throw new TypeError('Failed to fetch'); };
+    let netErr = '';
+    try { await callAi('привет'); } catch (e) { netErr = e.message; }
+    ok('network failure named plainly', netErr.includes('запрос не ушёл'), netErr);
+    // Предзапрос CORS нужен только заголовку, поэтому сбой сети пробует и остальные способы
+    ok('network failure tries other styles', netErr.includes('header>query>bearer'), netErr);
+    window.fetch = stubFetch;
+
+    // ---------- зависший запрос обрывается по времени
+    reset({ 'config/aiKey': googleKey });
+    const realTry = AI_TRY_TIMEOUT;
+    const realTotal = AI_TOTAL_TIMEOUT;
+    AI_TRY_TIMEOUT = 150;
+    AI_TOTAL_TIMEOUT = 450;
+    window.fetch = (url, opts) => new Promise((resolve, reject) => {
+      opts.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+    });
+    let hangErr = '';
+    const startedAt = Date.now();
+    try { await callAi('привет'); } catch (e) { hangErr = e.message; }
+    ok('hanging request is cut off', hangErr.includes('молчала дольше'), hangErr);
+    ok('whole run has a deadline', hangErr.includes('прервано'), hangErr);
+    ok('deadline respected', Date.now() - startedAt < 2000, String(Date.now() - startedAt));
+    AI_TRY_TIMEOUT = realTry;
+    AI_TOTAL_TIMEOUT = realTotal;
+    window.fetch = stubFetch;
+
+    // ---------- не-авторизационная ошибка не гоняет способы по кругу
+    reset({ 'config/aiKey': googleKey });
+    const tries = [];
+    window.fetch = async (url, opts) => {
+      tries.push(opts.headers['x-goog-api-key'] ? 'header' : 'other');
+      return reply({ error: { message: 'Quota exceeded for this project' } }, 429);
+    };
+    let quotaErr = '';
+    try { await callAi('привет'); } catch (e) { quotaErr = e.message; }
+    ok('quota error is not retried as auth', tries.length === AI_PROVIDERS.gemini.text.length, tries.join(','));
+    ok('quota error shown as is', quotaErr.includes('Quota'), quotaErr);
     window.fetch = stubFetch;
 
     // ---------- прокси важнее ключа
@@ -135,7 +226,9 @@ const reset = config => {
     let answer = await callAi('сколько я трачу?');
     ok('first model answers', answer === 'готовый ответ' && sentModels.length === 1, sentModels.length);
     ok('newest model tried first', sentModels[0].model === AI_PROVIDERS.gemini.text[0], sentModels[0].model);
-    ok('key goes in the header', sentModels[0].auth === 'Bearer AIzaTest');
+    ok('google key goes in x-goog-api-key', sentModels[0].googKey === 'AIzaTest', sentModels[0].googKey);
+    ok('no bearer for google', sentModels[0].auth === undefined);
+    ok('key not glued into the url', !sentModels[0].url.includes('key='), sentModels[0].url);
 
     reset({ 'config/geminiKey': 'AIzaTest' });
     failFirst = 2;
@@ -163,7 +256,7 @@ const reset = config => {
     reset({ 'config/aiKey': googleKey });
     window.fetch = async (url, opts) => {
       sentModels.push({ model: JSON.parse(opts.body).model });
-      return { json: async () => ({ choices: [{ message: { content: '' }, finish_reason: 'length' }] }) };
+      return reply({ choices: [{ message: { content: '' }, finish_reason: 'length' }] });
     };
     let emptyErr = '';
     try { await callAi('привет'); } catch (e) { emptyErr = e.message; }
@@ -174,24 +267,20 @@ const reset = config => {
 
     // ---------- ответ в родном формате Gemini тоже читается
     reset({ 'config/aiKey': googleKey });
-    window.fetch = async () => ({
-      json: async () => ({ candidates: [{ content: { parts: [{ text: 'ответ из candidates' }] } }] })
-    });
+    window.fetch = async () => (reply({ candidates: [{ content: { parts: [{ text: 'ответ из candidates' }] } }] }));
     ok('native gemini shape understood', (await callAi('привет')) === 'ответ из candidates');
 
-    window.fetch = async () => ({
-      json: async () => ({ choices: [{ message: { content: [{ type: 'text', text: 'части' }] } }] })
-    });
+    window.fetch = async () => (reply({ choices: [{ message: { content: [{ type: 'text', text: 'части' }] } }] }));
     reset({ 'config/aiKey': googleKey });
     ok('content parts joined', (await callAi('привет')) === 'части');
 
-    window.fetch = async () => ({ json: async () => ({ candidates: [{ finishReason: 'SAFETY' }] }) });
+    window.fetch = async () => (reply({ candidates: [{ finishReason: 'SAFETY' }] }));
     reset({ 'config/aiKey': googleKey });
     let blocked = '';
     try { await callAi('привет'); } catch (e) { blocked = e.message; }
     ok('native block reason shown', blocked.includes('SAFETY'), blocked);
 
-    window.fetch = async () => ({ json: async () => ({ unexpected: 1 }) });
+    window.fetch = async () => (reply({ unexpected: 1 }));
     reset({ 'config/aiKey': googleKey });
     let weird = '';
     try { await callAi('привет'); } catch (e) { weird = e.message; }

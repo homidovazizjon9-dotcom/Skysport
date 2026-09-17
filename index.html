@@ -18,10 +18,10 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;800&family=Golos+Text:wght@400;500;600&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260920">
+  <link rel="stylesheet" href="styles.css?v=20260924">
 
   <!-- Firebase -->
-  <script type="module" src="firebase-init.js?v=20260920"></script>
+  <script type="module" src="firebase-init.js?v=20260924"></script>
 </head>
 
 <body>
@@ -956,9 +956,14 @@
   <!-- RECEIPT RECOGNITION -->
   <div class="scanner-overlay" id="scannerOverlay">
     <img id="receiptPreview" alt="">
-    <div class="scanner-spinner"></div>
+    <div class="scanner-spinner" id="receiptSpinner"></div>
     <div class="scanner-hint" id="scannerHint">Читаю чек…</div>
-    <button class="scanner-close" onclick="closeReceiptScan()">Отмена</button>
+    <div class="scanner-error" id="receiptError"></div>
+    <div class="scanner-actions" id="receiptActions" style="display:none">
+      <button class="scanner-close" onclick="retryReceipt()">Ещё раз</button>
+      <button class="scanner-close" onclick="manualReceipt()">Ввести вручную</button>
+    </div>
+    <button class="scanner-close" id="receiptCancel" onclick="closeReceiptScan()">Отмена</button>
   </div>
 
   <!-- UNDO BAR -->
@@ -1050,7 +1055,7 @@
   <!-- TOAST -->
   <div class="toast" id="toast"></div>
 
-  <script src="app.js?v=20260920"></script>
+  <script src="app.js?v=20260924"></script>
 </body>
 
 </html>

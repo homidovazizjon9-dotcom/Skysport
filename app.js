@@ -588,7 +588,7 @@ window._onAuthReady = async (user) => {
 };
 
 // Видно в консоли: сразу ясно, свежий файл загрузился или из кэша
-const APP_VERSION = '20260920';
+const APP_VERSION = '20260924';
 
 function initApp() {
   // Reset AI text for new user session
@@ -1098,6 +1098,9 @@ function startVoiceInput() {
 
 let _receiptBusy = false;
 let _receiptCancelled = false;
+let _receiptClock = null;
+let _receiptStage = '';
+let _lastReceiptFile = null;
 
 function pickReceipt() {
   const input = document.getElementById('receiptFile');
@@ -1131,49 +1134,108 @@ function fileToCompressedDataUrl(file, maxSide = 1400, quality = 0.75) {
 
 function closeReceiptScan() {
   _receiptCancelled = true;
+  stopReceiptClock();
   const overlay = document.getElementById('scannerOverlay');
   if (overlay) overlay.classList.remove('show');
   const preview = document.getElementById('receiptPreview');
   if (preview) preview.removeAttribute('src');
+  showReceiptError('');
 }
 
 function receiptStatus(text) {
+  _receiptStage = text;
   const hint = document.getElementById('scannerHint');
   if (hint) hint.textContent = text;
 }
 
+// Секунды на экране: иначе долгое ожидание неотличимо от зависшего окна
+function startReceiptClock() {
+  stopReceiptClock();
+  const started = Date.now();
+  _receiptClock = setInterval(() => {
+    const hint = document.getElementById('scannerHint');
+    if (hint) hint.textContent = _receiptStage + ' ' + Math.round((Date.now() - started) / 1000) + ' с';
+  }, 1000);
+}
+
+function stopReceiptClock() {
+  if (_receiptClock) clearInterval(_receiptClock);
+  _receiptClock = null;
+}
+
+// Ошибка остаётся на экране: тост исчезал вместе с окном, и выглядело
+// это как «ничего не произошло»
+function showReceiptError(message) {
+  const box = document.getElementById('receiptError');
+  const actions = document.getElementById('receiptActions');
+  const spinner = document.getElementById('receiptSpinner');
+  const cancel = document.getElementById('receiptCancel');
+  if (box) box.textContent = message || '';
+  if (actions) actions.style.display = message ? 'flex' : 'none';
+  if (spinner) spinner.style.display = message ? 'none' : '';
+  if (cancel) cancel.style.display = message ? 'none' : '';
+}
+
+function retryReceipt() {
+  const file = _lastReceiptFile;
+  if (!file) { closeReceiptScan(); pickReceipt(); return Promise.resolve(); }
+  showReceiptError('');
+  return readReceipt(file);
+}
+
+function manualReceipt() {
+  closeReceiptScan();
+  switchNav('add', null);
+  showToast('Впишите сумму вручную', 'error');
+}
+
 async function handleReceiptFile(input) {
   const file = input && input.files && input.files[0];
-  if (!file || _receiptBusy) return;
+  if (!file) return;
   if (!/^image\//.test(file.type)) { showToast('Нужно фото чека', 'error'); return; }
+  readReceipt(file);
+}
+
+async function readReceipt(file) {
+  if (_receiptBusy) return;
   _receiptBusy = true;
   _receiptCancelled = false;
+  _lastReceiptFile = file;
+  const overlay = document.getElementById('scannerOverlay');
+  if (overlay) overlay.classList.add('show');
+  showReceiptError('');
+  receiptStatus('Готовлю фото…');
+  startReceiptClock();
   try {
-    const dataUrl = await fileToCompressedDataUrl(file);
+    // 1000 px хватает, чтобы прочитать «ИТОГО», а весит вчетверо меньше 1400 px:
+    // по мобильной сети именно отправка была самой долгой частью
+    const dataUrl = await fileToCompressedDataUrl(file, 1000, 0.6);
     if (_receiptCancelled) return;
     const preview = document.getElementById('receiptPreview');
     if (preview) preview.src = dataUrl;
-    const overlay = document.getElementById('scannerOverlay');
-    if (overlay) overlay.classList.add('show');
-    receiptStatus('Читаю чек…');
+    // Размер видно сразу: если фото огромное, ожидание перестаёт быть загадкой
+    receiptStatus('Читаю чек (' + Math.round(dataUrl.length / 1400) + ' КБ),');
 
     const answer = await readReceiptPhoto(dataUrl);
     if (_receiptCancelled) return;
-    // Снимок для хранения мельче того, что ушёл в модель
-    const stored = await fileToCompressedDataUrl(file, 900, 0.55).catch(() => null);
     const parsed = parseReceiptJson(answer);
     if (!parsed) {
-      showToast('Не разобрал чек — впишите вручную', 'error');
-      switchNav('add', null);
+      showReceiptError('Модель ответила, но суммы в ответе нет. Ответ: ' +
+        String(answer || '').slice(0, 300));
       return;
     }
     applyReceiptData(parsed);
-    if (stored) showPendingReceipt(stored);
+    // Тот же снимок кладём к операции: второе сжатие ничего не экономило
+    showPendingReceipt(dataUrl);
+    closeReceiptScan();
   } catch (e) {
-    if (!_receiptCancelled) showToast(receiptErrorText(e), 'error');
+    if (!_receiptCancelled) {
+      stopReceiptClock();
+      showReceiptError(receiptErrorText(e));
+    }
   } finally {
     _receiptBusy = false;
-    closeReceiptScan();
+    stopReceiptClock();
   }
 }
 
@@ -4169,6 +4231,11 @@ const AI_PROVIDERS = {
   }
 };
 
+// Одна попытка и весь перебор моделей: без этого зависший запрос крутит
+// «Анализирую…» до перезагрузки страницы
+let AI_TRY_TIMEOUT = 45000;
+let AI_TOTAL_TIMEOUT = 120000;
+
 let _aiEndpoint = null;
 
 // Ключи провайдеров узнаваемы с первого взгляда, так что перепутанный узел
@@ -4256,34 +4323,75 @@ async function authorize(ep, style) {
   return { url, headers };
 }
 
+// Ответы провайдера приходят длинными английскими абзацами. Частые случаи
+// переводим и сразу говорим, что делать; исходный текст оставляем следом.
+const AI_HINTS = [
+  [/ACCESS_TOKEN_TYPE_UNSUPPORTED|Expected OAuth 2 access token/i,
+    'В config/aiKey лежит токен доступа, а не ключ API. Ключ берётся на aistudio.google.com/apikey → Create API key'],
+  [/API_KEY_INVALID|API key not valid/i,
+    'Ключ не принят. Проверьте config/aiKey — при копировании мышью часто прихватываются лишние символы'],
+  [/SERVICE_DISABLED|has not been used in project|is disabled/i,
+    'В проекте Google не включён Generative Language API — включите его в консоли и подождите пару минут'],
+  [/RESOURCE_EXHAUSTED|quota|rate limit/i,
+    'Закончилась бесплатная квота — попробуйте позже'],
+  [/PERMISSION_DENIED|not authorized|403/i,
+    'Ключ не даёт доступа к этой модели — проверьте, для того ли проекта он создан'],
+  [/location|region|not available in your country/i,
+    'Провайдер не обслуживает этот регион — поможет прокси из папки ai-proxy']
+];
+
+function aiHint(message) {
+  const found = AI_HINTS.find(([pattern]) => pattern.test(String(message || '')));
+  return found ? found[1] : '';
+}
+
 function isAuthProblem(message) {
   return /auth|credential|api[_ -]?key|unauthor|401|403/i.test(String(message || ''));
 }
 
-async function aiRequest(body) {
+async function aiRequest(body, deadline) {
   const ep = await getAiEndpoint();
   if (!ep) throw new Error('Нет ключа для ИИ. Проверь Firebase: config/aiKey или config/aiProxy');
 
   // Способ, который уже сработал, запоминаем на сессию
   const styles = ep.proxy ? ['proxy']
     : (ep.authStyle ? [ep.authStyle] : (ep.provider.authStyles || ['bearer']));
-  let authErr = null;
+  const tried = [];
+  let lastErr = null;
   for (const style of styles) {
+    const left = deadline ? deadline - Date.now() : AI_TRY_TIMEOUT;
+    if (left <= 0) break;
+    tried.push(style);
     try {
-      const answer = await aiSend(ep, style, body);
+      const answer = await aiSend(ep, style, body, Math.min(left, AI_TRY_TIMEOUT));
       ep.authStyle = ep.proxy ? null : style;
       return answer;
     } catch (e) {
-      if (!isAuthProblem(e.message)) throw e;
-      authErr = e;
+      const message = e && e.message ? e.message : String(e);
+      const wrapped = new Error('[' + tried.join('>') + '] ' + message);
+      // Отказ CORS зависит от способа: заголовок требует предзапроса, ?key= нет.
+      // Поэтому сетевой сбой — тоже повод попробовать следующий способ.
+      if (!isAuthProblem(message) && !/запрос не ушёл/.test(message)) throw wrapped;
+      lastErr = wrapped;
     }
   }
-  throw authErr || new Error('Провайдер не принял ключ');
+  throw lastErr || new Error('Провайдер не принял ключ');
 }
 
-async function aiSend(ep, style, body) {
+async function aiSend(ep, style, body, timeout) {
   const { url, headers } = await authorize(ep, style);
-  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+  const stop = new AbortController();
+  const timer = setTimeout(() => stop.abort(), Math.max(1000, timeout || AI_TRY_TIMEOUT));
+  let res;
+  try {
+    res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: stop.signal });
+  } catch (e) {
+    if (stop.signal.aborted) throw new Error('модель молчала дольше ' + Math.round((timeout || AI_TRY_TIMEOUT) / 1000) + ' с');
+    // fetch падает так при обрыве связи и при отказе CORS — ответа нет вообще
+    throw new Error('запрос не ушёл: ' + ((e && e.message) || 'сеть'));
+  } finally {
+    clearTimeout(timer);
+  }
   // Сначала текстом: если это не JSON, покажем начало ответа, а не «пусто»
   const raw = await res.text();
   let json = null;
@@ -4350,11 +4458,16 @@ async function aiComplete(kind, messages, maxTokens, temperature) {
   // Копим ответы всех моделей: иначе видно только последнюю, а сломаться
   // могла первая — и по какой причине, остаётся загадкой
   const failures = [];
+  const deadline = Date.now() + AI_TOTAL_TIMEOUT;
   for (const model of models) {
+    if (Date.now() >= deadline) {
+      failures.push('ожидание прервано после ' + Math.round(AI_TOTAL_TIMEOUT / 1000) + ' с');
+      break;
+    }
     try {
       const json = await aiRequest({
         model, messages, max_tokens: maxTokens, temperature, ...tune(model)
-      });
+      }, deadline);
       const text = extractAnswer(json);
       if (text) return text;
       // Причина пустоты важна: length — не хватило max_tokens, остальное — фильтры
@@ -4365,7 +4478,9 @@ async function aiComplete(kind, messages, maxTokens, temperature) {
     }
   }
   if (!failures.length) throw new Error('Ни одна модель не ответила');
-  throw new Error(failures.join(' | ').slice(0, 500));
+  const details = failures.join(' | ');
+  const hint = aiHint(details);
+  throw new Error(hint ? hint + '. Ответ сервиса: ' + details.slice(0, 200) : details.slice(0, 500));
 }
 
 async function callAi(prompt) {

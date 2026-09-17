@@ -3431,6 +3431,29 @@ body::before {
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
 }
 
+.scanner-error {
+  position: relative;
+  max-width: 320px;
+  max-height: 40vh;
+  overflow-y: auto;
+  margin-top: 14px;
+  padding: 0 24px;
+  color: #ffd9e0;
+  font-size: var(--fs-1);
+  line-height: 1.5;
+  text-align: center;
+  word-break: break-word;
+}
+
+.scanner-actions {
+  position: absolute;
+  bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  gap: 10px;
+}
+
+.scanner-actions .scanner-close { position: static; }
+
 .scanner-close {
   position: absolute;
   bottom: calc(40px + env(safe-area-inset-bottom, 0px));

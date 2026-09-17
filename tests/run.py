@@ -73,7 +73,10 @@ def run(chrome, page_path):
     url = 'file:///' + page_path.replace('\\', '/')
     proc = subprocess.run(
         [chrome, '--headless', '--disable-gpu', '--no-sandbox',
-         '--user-data-dir=' + os.path.join(BUILD, 'chrome-profile'), '--dump-dom', url],
+         '--user-data-dir=' + os.path.join(BUILD, 'chrome-profile'),
+         # Виртуальное время: снимок DOM ждёт таймеры набора, а не реальные секунды
+         '--virtual-time-budget=15000',
+         '--dump-dom', url],
         capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=180)
     dom = proc.stdout or ''
     # Маркеры встречаются и в исходнике скрипта — результаты всегда последние
