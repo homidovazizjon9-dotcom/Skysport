@@ -194,7 +194,7 @@ python tests/run.py        # все наборы
 python tests/run.py 05     # только набор, в имени которого есть "05"
 ```
 
-271 проверка в восьми наборах гоняется в headless Chrome на настоящих `index.html`,
+290 проверок в восьми наборах гоняются в headless Chrome на настоящих `index.html`,
 `styles.css` и `app.js`. Подробности — в [tests/README.md](tests/README.md).
 Прогоняй перед публикацией: тесты ловят то, что глазами на телефоне не видно.
 
@@ -261,8 +261,8 @@ README.md         ← эта инструкция
 2. `?v=` в трёх ссылках `index.html` (`styles.css`, `app.js`, `firebase-init.js`)
 
 ```bash
-# заменить 20260917 на новую дату во всех файлах сразу
-sed -i 's/20260917/20261001/g' sw.js index.html
+# заменить 20260918 на новую дату во всех файлах сразу
+sed -i 's/20260918/20261001/g' sw.js index.html
 python tests/run.py
 ```
 

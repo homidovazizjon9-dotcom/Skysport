@@ -1,5 +1,5 @@
 // Bump VERSION on every release — it must match the ?v= in index.html
-const VERSION = '20260917';
+const VERSION = '20260918';
 const CACHE_NAME = 'rashody-v' + VERSION;
 
 self.addEventListener('message', e => {

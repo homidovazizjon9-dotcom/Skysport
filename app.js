@@ -587,10 +587,14 @@ window._onAuthReady = async (user) => {
   }
 };
 
+// Видно в консоли: сразу ясно, свежий файл загрузился или из кэша
+const APP_VERSION = '20260918';
+
 function initApp() {
   // Reset AI text for new user session
   const aiEl = document.getElementById('aiText');
   if (aiEl) aiEl.textContent = 'Нажмите кнопку ниже, чтобы получить персональный анализ';
+  console.log('Трекер расходов, сборка ' + APP_VERSION);
   // Сбрасываем адрес ИИ: у нового пользователя может быть другой ключ
   _aiEndpoint = null;
   hydrateIcons();
@@ -4252,6 +4256,36 @@ async function aiRequest(body) {
   return json;
 }
 
+// Провайдеры отвечают в формате OpenAI, но на всякий случай понимаем
+// и родной формат Gemini: пустой экран без объяснений — худший исход
+function extractAnswer(json) {
+  const choice = json && json.choices && json.choices[0];
+  const content = choice && choice.message && choice.message.content;
+  if (typeof content === 'string' && content.trim()) return content;
+  if (Array.isArray(content)) {
+    const joined = content.map(p => (typeof p === 'string' ? p : (p && p.text) || '')).join('').trim();
+    if (joined) return joined;
+  }
+  const candidate = json && json.candidates && json.candidates[0];
+  const parts = candidate && candidate.content && candidate.content.parts;
+  if (Array.isArray(parts)) {
+    const joined = parts.map(p => (p && p.text) || '').join('').trim();
+    if (joined) return joined;
+  }
+  return '';
+}
+
+// Что именно пришло вместо текста — чтобы не гадать по пустому экрану
+function describeEmpty(model, json) {
+  const choice = json && json.choices && json.choices[0];
+  const candidate = json && json.candidates && json.candidates[0];
+  const why = (choice && choice.finish_reason) ||
+    (candidate && (candidate.finishReason || candidate.finish_reason)) ||
+    (json && json.promptFeedback && json.promptFeedback.blockReason) ||
+    Object.keys(json || {}).join(',') || 'ответ пустой';
+  return 'Пустой ответ модели ' + model + ' (' + why + ')';
+}
+
 // Перебирает модели провайдера, пока одна не ответит
 async function aiComplete(kind, messages, maxTokens, temperature) {
   const ep = await getAiEndpoint();
@@ -4264,12 +4298,10 @@ async function aiComplete(kind, messages, maxTokens, temperature) {
       const json = await aiRequest({
         model, messages, max_tokens: maxTokens, temperature, ...tune(model)
       });
-      const choice = json.choices && json.choices[0];
-      const text = choice && choice.message && choice.message.content;
+      const text = extractAnswer(json);
       if (text) return text;
       // Причина пустоты важна: length — не хватило max_tokens, остальное — фильтры
-      lastErr = new Error('Пустой ответ модели ' + model +
-        (choice && choice.finish_reason ? ' (' + choice.finish_reason + ')' : ''));
+      lastErr = new Error(describeEmpty(model, json));
     } catch (e) {
       // «model does not exist» — просто пробуем следующую
       lastErr = e;

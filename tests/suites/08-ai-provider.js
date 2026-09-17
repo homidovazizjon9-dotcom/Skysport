@@ -172,6 +172,32 @@ const reset = config => {
     ok('all models tried before giving up', sentModels.length === AI_PROVIDERS.gemini.text.length);
     window.fetch = stubFetch;
 
+    // ---------- ответ в родном формате Gemini тоже читается
+    reset({ 'config/aiKey': googleKey });
+    window.fetch = async () => ({
+      json: async () => ({ candidates: [{ content: { parts: [{ text: 'ответ из candidates' }] } }] })
+    });
+    ok('native gemini shape understood', (await callAi('привет')) === 'ответ из candidates');
+
+    window.fetch = async () => ({
+      json: async () => ({ choices: [{ message: { content: [{ type: 'text', text: 'части' }] } }] })
+    });
+    reset({ 'config/aiKey': googleKey });
+    ok('content parts joined', (await callAi('привет')) === 'части');
+
+    window.fetch = async () => ({ json: async () => ({ candidates: [{ finishReason: 'SAFETY' }] }) });
+    reset({ 'config/aiKey': googleKey });
+    let blocked = '';
+    try { await callAi('привет'); } catch (e) { blocked = e.message; }
+    ok('native block reason shown', blocked.includes('SAFETY'), blocked);
+
+    window.fetch = async () => ({ json: async () => ({ unexpected: 1 }) });
+    reset({ 'config/aiKey': googleKey });
+    let weird = '';
+    try { await callAi('привет'); } catch (e) { weird = e.message; }
+    ok('unknown shape lists its keys', weird.includes('unexpected'), weird);
+    window.fetch = stubFetch;
+
     // ---------- чек идёт к тем же моделям
     reset({ 'config/geminiKey': 'AIzaTest' });
     const raw = await readReceiptPhoto('data:image/gif;base64,R0lGODlhAQABAAAAACw=');

@@ -18,7 +18,7 @@ const DEFAULT_UPSTREAM = 'https://generativelanguage.googleapis.com/v1beta/opena
 // Модель и длину ответа задаёт приложение, но лимиты здесь — чтобы чужой
 // запрос не сжёг квоту одним махом.
 const MAX_BODY_BYTES = 6 * 1024 * 1024;   // фото чека ~0.3 МБ, запас большой
-const MAX_TOKENS = 1000;
+const MAX_TOKENS = 4000;
 
 export default {
   async fetch(request, env) {
