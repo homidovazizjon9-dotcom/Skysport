@@ -18,10 +18,10 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;800&family=Golos+Text:wght@400;500;600&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260916">
+  <link rel="stylesheet" href="styles.css?v=20260917">
 
   <!-- Firebase -->
-  <script type="module" src="firebase-init.js?v=20260916"></script>
+  <script type="module" src="firebase-init.js?v=20260917"></script>
 </head>
 
 <body>
@@ -146,6 +146,8 @@
     </div>
   </div>
 
+  <div class="offline-bar" id="offlineBar">Нет сети — записи сохранятся и уйдут, когда связь вернётся</div>
+
   <div class="app" id="mainApp" style="display:none">
 
     <!-- HEADER -->
@@ -236,7 +238,8 @@
               placeholder="Обед 45" oninput="previewQuickAdd()"
               onkeydown="if(event.key==='Enter'){event.preventDefault();submitQuickAdd();}">
             <button class="quick-icon-btn" id="micBtn" onclick="startVoiceInput()" title="Голосовой ввод" data-icon="mic"></button>
-            <button class="quick-icon-btn" id="scanBtn" onclick="startQrScan()" title="Сканировать QR чека" data-icon="camera"></button>
+            <button class="quick-icon-btn" id="scanBtn" onclick="pickReceipt()" title="Сфотографировать чек" data-icon="camera"></button>
+            <input type="file" id="receiptFile" class="visually-hidden" accept="image/*" onchange="handleReceiptFile(this)">
           </div>
           <div class="quick-add-hint" id="quickAddHint">Быстрый ввод: «такси 30», «+зарплата 5000». Enter — добавить.</div>
         </div>
@@ -315,6 +318,14 @@
           <div class="field-group">
             <div class="field-label">Заметка (необязательно)</div>
             <input class="field-input" type="text" id="noteInput" placeholder="Доп. информация...">
+          </div>
+
+          <div class="receipt-chip" id="receiptChip" style="display:none">
+            <img id="receiptChipImg" alt="">
+            <span>Фото чека прикреплено</span>
+            <button type="button" onclick="dropPendingReceipt()" title="Убрать фото">
+              <span data-icon="close"></span>
+            </button>
           </div>
 
           <button class="submit-btn" onclick="addTransaction()" id="submitBtn">
@@ -400,7 +411,7 @@
     <!-- ======= HISTORY ======= -->
     <div id="tab-history" class="tab-content">
       <div class="history-section">
-        <input class="field-input" type="text" id="searchInput" placeholder="🔍  Поиск..." oninput="renderHistory()"
+        <input class="field-input" type="text" id="searchInput" placeholder="🔍  Поиск..." oninput="onSearchInput()"
           style="margin-bottom:12px">
         <div class="date-range">
           <div class="date-presets" id="datePresets"></div>
@@ -434,15 +445,25 @@
             <div style="background:var(--surface2);border-radius:16px;padding:20px;border:1px solid var(--border);">
               <h4 style="font-size:14px;margin-bottom:14px;color:var(--text);font-family:'Unbounded',sans-serif;">Новый
                 платеж</h4>
-              <input id="subName" class="field-input" placeholder="Название (Netflix, Интернет)"
+              <input id="subName" class="field-input" placeholder="Название (Netflix, Зарплата)"
                 style="margin-bottom:10px;">
+              <div style="display:flex;gap:8px;margin-bottom:10px;">
+                <button class="cat-chip selected" id="subTypeExpense" onclick="setSubType('expense')"
+                  style="flex:1;flex-direction:row;justify-content:center;gap:6px">
+                  <span data-icon="arrow-out"></span> Расход
+                </button>
+                <button class="cat-chip" id="subTypeIncome" onclick="setSubType('income')"
+                  style="flex:1;flex-direction:row;justify-content:center;gap:6px">
+                  <span data-icon="arrow-in"></span> Доход
+                </button>
+              </div>
               <div style="display:flex;gap:10px;margin-bottom:10px;">
                 <input id="subAmount" class="field-input" type="number" placeholder="Сумма" style="flex:1;">
                 <input id="subDay" class="field-input" type="number" min="1" max="31" placeholder="День (1-31)"
                   style="flex:1;">
               </div>
-              <select id="subCat" class="field-input" style="margin-bottom:16px;width:100%;"></select>
-              <button class="submit-btn" style="width:100%;padding:14px;" onclick="addSub()">+ Сохранить платеж</button>
+              <div id="subCatField"><select id="subCat" class="field-input" style="margin-bottom:16px;width:100%;"></select></div>
+              <button class="submit-btn" style="width:100%;padding:14px;" onclick="addSub()">+ Сохранить</button>
             </div>
             <button
               style="width:100%;padding:14px;margin-top:16px;background:var(--surface3);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-size:14px;transition:0.2s"
@@ -539,6 +560,34 @@
             <input class="field-input" type="number" id="monthBudget" placeholder="необязательно"
               oninput="saveSettings()">
           </div>
+        </div>
+
+        <div class="settings-card" id="installCard" style="display:none">
+          <h3><span data-icon="download"></span>Приложение</h3>
+          <button class="copy-btn" style="width:100%;color:var(--accent);border-color:var(--accent)"
+            onclick="installApp()">Установить на телефон</button>
+          <p class="settings-hint" style="margin:12px 0 0">Иконка на экране «Домой», запуск без адресной строки.</p>
+        </div>
+
+        <div class="settings-card">
+          <h3><span data-icon="users"></span>Совместный доступ</h3>
+          <p class="settings-hint">Общий бюджет: второй человек видит те же операции и счета.</p>
+
+          <div class="settings-row">
+            <label>Ваш код</label>
+            <button class="copy-btn" style="width:auto;padding:8px 16px;max-width:60%;overflow:hidden;text-overflow:ellipsis"
+              id="myShareCode" onclick="copyShareCode()">—</button>
+          </div>
+
+          <div class="share-add-row">
+            <input class="field-input" type="text" id="shareCodeInput" placeholder="Код второго человека"
+              autocomplete="off">
+            <button class="copy-btn" style="width:auto;padding:10px 16px;flex-shrink:0"
+              onclick="addShareMember()">Дать доступ</button>
+          </div>
+
+          <div id="shareMembers"></div>
+          <div id="shareSpaces"></div>
         </div>
 
         <div class="settings-card">
@@ -642,6 +691,11 @@
               oninput="onPlanBudgetInput()">
             <button class="plan-save-btn" onclick="savePlanBudget()">Сохранить</button>
           </div>
+          <label class="plan-rollover">
+            <input type="checkbox" id="planRollover" onchange="toggleRollover()">
+            <span>Переносить остаток с прошлого месяца</span>
+          </label>
+          <div class="plan-rollover-note" id="planRolloverNote"></div>
           <!-- Day available card -->
           <div class="plan-day-card" id="planDayCard">
             <div class="plan-day-icon">☀️</div>
@@ -713,6 +767,55 @@
         <button class="goal-add-btn"
           onclick="document.getElementById('goalFormCard').style.display='';document.getElementById('goalFormCard').scrollIntoView({behavior:'smooth'})">
           <span data-icon="plus"></span> Добавить цель накопления
+        </button>
+
+      </div>
+    </div>
+
+    <div id="tab-debts" class="tab-content">
+      <div class="goals-section">
+
+        <div class="debt-totals" id="debtTotals"></div>
+
+        <div class="goal-add-card" id="debtFormCard" style="display:none">
+          <h3>➕ Новый долг</h3>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <button class="cat-chip selected" id="debtTypeLent" onclick="setDebtType('lent')"
+              style="flex:1;flex-direction:row;justify-content:center;gap:6px">
+              <span data-icon="arrow-out"></span> Дал в долг
+            </button>
+            <button class="cat-chip" id="debtTypeBorrowed" onclick="setDebtType('borrowed')"
+              style="flex:1;flex-direction:row;justify-content:center;gap:6px">
+              <span data-icon="arrow-in"></span> Взял в долг
+            </button>
+          </div>
+          <div class="field-group" style="margin-bottom:12px">
+            <div class="field-label" id="debtPersonLabel">Кому дали</div>
+            <input class="field-input" type="text" id="debtPerson" placeholder="Имя">
+          </div>
+          <div class="field-group" style="margin-bottom:12px">
+            <div class="field-label">Сумма (<span class="cur">сом</span>)</div>
+            <input class="field-input" type="number" id="debtAmount" inputmode="decimal" placeholder="1000">
+          </div>
+          <div class="field-group" style="margin-bottom:12px">
+            <div class="field-label">Счёт</div>
+            <select class="field-input" id="debtAccount"></select>
+          </div>
+          <div class="field-group" style="margin-bottom:14px">
+            <div class="field-label">Когда вернуть (необязательно)</div>
+            <input class="field-input" type="date" id="debtDue">
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="modal-btn secondary" style="flex:1"
+              onclick="document.getElementById('debtFormCard').style.display='none'">Отмена</button>
+            <button class="modal-btn primary" style="flex:2" onclick="saveNewDebt()">Записать долг</button>
+          </div>
+        </div>
+
+        <div class="goals-list" id="debtsList"></div>
+
+        <button class="goal-add-btn" onclick="openDebtForm()">
+          <span data-icon="plus"></span> Добавить долг
         </button>
 
       </div>
@@ -826,6 +929,18 @@
       <span class="more-label">Цели</span>
     </button>
 
+    <button class="more-item" id="more-debts" onclick="switchNav('debts',null);closeMoreMenu()">
+      <span class="more-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 8h13"/>
+          <path d="M14 5l3 3-3 3"/>
+          <path d="M20 16H7"/>
+          <path d="M10 13l-3 3 3 3"/>
+        </svg>
+      </span>
+      <span class="more-label">Долги</span>
+    </button>
+
     <button class="more-item" id="more-settings" onclick="switchNav('settings',null);closeMoreMenu()">
       <span class="more-icon">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
@@ -838,12 +953,12 @@
 
   </div>
 </div>
-  <!-- QR SCANNER -->
+  <!-- RECEIPT RECOGNITION -->
   <div class="scanner-overlay" id="scannerOverlay">
-    <video id="scannerVideo" playsinline muted></video>
-    <div class="scanner-frame"></div>
-    <div class="scanner-hint" id="scannerHint">Наведите камеру на QR-код чека</div>
-    <button class="scanner-close" onclick="stopQrScan()">Закрыть</button>
+    <img id="receiptPreview" alt="">
+    <div class="scanner-spinner"></div>
+    <div class="scanner-hint" id="scannerHint">Читаю чек…</div>
+    <button class="scanner-close" onclick="closeReceiptScan()">Отмена</button>
   </div>
 
   <!-- UNDO BAR -->
@@ -909,6 +1024,21 @@
         <input class="field-input" type="text" id="editNote" placeholder="необязательно">
       </div>
 
+      <div class="field-group" style="margin-bottom:4px">
+        <div class="field-label">Чек</div>
+        <div id="editPhotoBox">
+          <img id="editPhotoImg" class="receipt-photo" alt="" style="display:none">
+          <div style="display:flex;gap:8px">
+            <button type="button" class="modal-btn secondary" style="flex:1" id="editPhotoAdd"
+              onclick="document.getElementById('receiptAttachFile').click()">Прикрепить фото</button>
+            <button type="button" class="modal-btn secondary" style="flex:1;display:none" id="editPhotoDel"
+              onclick="removeReceiptPhoto()">Убрать фото</button>
+          </div>
+        </div>
+      </div>
+      <input type="file" id="receiptAttachFile" class="visually-hidden" accept="image/*"
+        onchange="attachReceiptToTx(this)">
+
       <div class="modal-actions">
         <button class="modal-btn danger" onclick="deleteFromModal()"><span data-icon="trash"></span>Удалить</button>
         <button class="modal-btn secondary" onclick="closeModalDirect()">Отмена</button>
@@ -920,7 +1050,7 @@
   <!-- TOAST -->
   <div class="toast" id="toast"></div>
 
-  <script src="app.js?v=20260916"></script>
+  <script src="app.js?v=20260917"></script>
 </body>
 
 </html>
