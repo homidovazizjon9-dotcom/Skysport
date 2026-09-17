@@ -6,6 +6,7 @@
   --accent: #7c6dfa;
   --accent2: #ef8fa3;
   --accent3: #74d6a8;
+  --accent3-rgb: 116, 214, 168;
   --accent4: #e0bf72;
   --text: #f0f0ff;
   --text2: #8888aa;
@@ -43,6 +44,7 @@ body.light {
   --accent: #6c5ce7;
   --accent2: #d1355f;
   --accent3: #0f9d58;
+  --accent3-rgb: 15, 157, 88;
   --accent4: #fdcb6e;
   --text: #1a1a2e;
   --text2: #666680;
@@ -405,20 +407,22 @@ body::before {
   pointer-events: none;
 }
 
+/* Сегодня без трат. Карточка дышит: заметно глазом, но без неона —
+   пульсирует и сама полоска сверху, иначе она читается как приклеенная лента. */
 .balance-card.easter-egg {
-  animation: softGreenGlow 3s ease-in-out infinite alternate, fadeUp 0.5s 0.15s both;
+  animation: softGreenGlow 2.6s ease-in-out infinite alternate, fadeUp 0.5s 0.15s both;
 }
 
 @keyframes softGreenGlow {
   from {
-    box-shadow: none;
+    box-shadow: 0 0 0 rgba(var(--accent3-rgb), 0);
     border-color: var(--border);
-    border-top-color: var(--accent3);
+    border-top-color: rgba(var(--accent3-rgb), 0.35);
   }
 
   to {
-    box-shadow: 0 0 16px rgba(116, 214, 168, 0.18);
-    border-color: rgba(116, 214, 168, 0.28);
+    box-shadow: 0 0 26px rgba(var(--accent3-rgb), 0.3);
+    border-color: rgba(var(--accent3-rgb), 0.45);
     border-top-color: var(--accent3);
   }
 }
