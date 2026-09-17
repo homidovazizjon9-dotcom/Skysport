@@ -4159,6 +4159,15 @@ const AI_PROVIDERS = {
 
 let _aiEndpoint = null;
 
+// Ключи провайдеров узнаваемы с первого взгляда, так что перепутанный узел
+// в базе не отправит запрос не туда
+function providerFromKey(key) {
+  const value = String(key || '');
+  if (/^AIza[\w-]{10,}$/.test(value)) return 'gemini';
+  if (/^gsk_[\w-]{10,}$/.test(value)) return 'groq';
+  return null;
+}
+
 async function fbReady() {
   for (let i = 0; i < 20; i++) {
     if (window._fbGet && window._fbRef && window._fbDb) return true;
@@ -4195,10 +4204,12 @@ async function getAiEndpoint() {
   ]);
 
   const asked = String(explicit || '').toLowerCase();
-  const name = AI_PROVIDERS[asked] ? asked : (geminiKey ? 'gemini' : 'groq');
+  const key = aiKey || geminiKey || groqKey;
+  // Порядок: явно указанный провайдер → форма самого ключа → какой узел заполнен
+  const name = AI_PROVIDERS[asked] ? asked
+    : providerFromKey(key) || (groqKey && !aiKey && !geminiKey ? 'groq' : 'gemini');
   const provider = AI_PROVIDERS[name];
   const proxy = aiProxy || groqProxy;
-  const key = aiKey || (name === 'gemini' ? geminiKey : groqKey);
 
   if (typeof proxy === 'string' && /^https:\/\//.test(proxy)) {
     _aiEndpoint = { name, provider, url: proxy.trim(), proxy: true };
@@ -4225,7 +4236,14 @@ async function aiRequest(body) {
   }
   const res = await fetch(ep.url, { method: 'POST', headers, body: JSON.stringify(body) });
   const json = await res.json().catch(() => ({ error: { message: 'HTTP ' + res.status } }));
-  if (json.error) throw new Error(json.error.message || ('HTTP ' + res.status));
+  if (json.error) {
+    const message = json.error.message || ('HTTP ' + res.status);
+    if (/api[_ -]?key/i.test(message) && !ep.proxy && !providerFromKey(ep.key)) {
+      throw new Error('Ключ не похож на ключ ' + ep.provider.label +
+        '. Для Gemini он начинается с AIza — возьмите его на aistudio.google.com/apikey');
+    }
+    throw new Error(message);
+  }
   return json;
 }
 

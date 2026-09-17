@@ -1,0 +1,18 @@
+name = "rashody-ai"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+[vars]
+# Домены, которым разрешено обращаться к прокси, через запятую.
+# Локальную разработку добавляй только на время: "https://... ,http://localhost:8080"
+ALLOWED_ORIGINS = "https://ВАШ_ЛОГИН.github.io"
+
+# Публичный ключ Firebase — тот же, что в firebase-init.js
+FIREBASE_API_KEY = "AIzaSyBeiC9-NpXiHMoDACAsCwVd-mZsx-f2xVI"
+
+# Куда пересылать запрос. По умолчанию — Gemini.
+# Groq: "https://api.groq.com/openai/v1/chat/completions"
+AI_UPSTREAM = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+
+# AI_KEY задаётся отдельно и в файл не пишется:
+#   npx wrangler secret put AI_KEY
