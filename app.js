@@ -2,35 +2,70 @@
 // DATA
 // ==============================
 const BASE_CATS = [
-  { id: 'food', label: 'Еда', icon: '🍕', color: '#2f80ed' },
-  { id: 'car', label: 'Машина', icon: '🚗', color: '#e8763a' },
-  { id: 'fun', label: 'Развлечения', icon: '🎮', color: '#14b8a6' },
-  { id: 'health', label: 'Здоровье', icon: '💊', color: '#d99000' },
-  { id: 'gift', label: 'Подарок', icon: '🎁', color: '#db2777' },
-  { id: 'credit', label: 'Кредит', icon: '💳', color: '#be123c' },
-  { id: 'home', label: 'Дом', icon: '🏠', color: '#0891b2' },
-  { id: 'cloth', label: 'Одежда', icon: '👕', color: '#65a30d' },
-  { id: 'savings', label: 'Накопления', icon: '🏦', color: '#12b76a' },
-  { id: 'income', label: 'Доход', icon: '💰', color: '#0f9d58' },
-  { id: 'other', label: 'Другое', icon: '📦', color: '#6b7090' },
+  { id: 'food', label: 'Еда', icon: '🍕', color: 'blue' },
+  { id: 'car', label: 'Машина', icon: '🚗', color: 'orange' },
+  { id: 'fun', label: 'Развлечения', icon: '🎮', color: 'teal' },
+  { id: 'health', label: 'Здоровье', icon: '💊', color: 'amber' },
+  { id: 'gift', label: 'Подарок', icon: '🎁', color: 'pink' },
+  { id: 'credit', label: 'Кредит', icon: '💳', color: 'crimson' },
+  { id: 'home', label: 'Дом', icon: '🏠', color: 'cyan' },
+  { id: 'cloth', label: 'Одежда', icon: '👕', color: 'olive' },
+  { id: 'savings', label: 'Накопления', icon: '🏦', color: 'green' },
+  { id: 'debt', label: 'Долг', icon: '🤝', color: 'amber' },
+  { id: 'income', label: 'Доход', icon: '💰', color: 'green' },
+  { id: 'other', label: 'Другое', icon: '📦', color: 'slate' },
 ];
 
-// Neon colours from the first palette were unreadable on the light theme
-const LEGACY_COLORS = {
-  '#7c6dfa': '#2f80ed', '#fa6d8f': '#e8763a', '#6dfad6': '#14b8a6', '#fad06d': '#d99000',
-  '#fa9e6d': '#db2777', '#d06dfa': '#be123c', '#6daaff': '#0891b2', '#ff6daa': '#65a30d',
-  '#6dfa9e': '#12b76a', '#888aaa': '#6b7090'
+// Saturated colours vibrate on near-black and wash out on white, so every
+// data colour has two tones: [dark theme, light theme].
+const DATA_COLORS = {
+  blue:    ['#7fa9f0', '#2f6fd0'],
+  teal:    ['#6fd3c7', '#0f8b84'],
+  green:   ['#6fd39a', '#12864f'],
+  amber:   ['#e0bf72', '#a87400'],
+  orange:  ['#efa373', '#c35a1e'],
+  pink:    ['#eb9ec2', '#b8447e'],
+  crimson: ['#e8909c', '#b03546'],
+  cyan:    ['#76c7d8', '#0b7c94'],
+  olive:   ['#b5cf7e', '#5c7d16'],
+  slate:   ['#9aa0b8', '#5f6480']
 };
 
-function dataColor(value) {
-  const hex = String(value || '').toLowerCase();
-  return LEGACY_COLORS[hex] || value;
+// Colours saved by older versions of the app
+const COLOR_ALIASES = {
+  '#7c6dfa': 'blue', '#fa6d8f': 'orange', '#6dfad6': 'teal', '#fad06d': 'amber',
+  '#fa9e6d': 'pink', '#d06dfa': 'crimson', '#6daaff': 'cyan', '#ff6daa': 'olive',
+  '#6dfa9e': 'green', '#888aaa': 'slate',
+  '#2f80ed': 'blue', '#e8763a': 'orange', '#14b8a6': 'teal', '#d99000': 'amber',
+  '#db2777': 'pink', '#be123c': 'crimson', '#0891b2': 'cyan', '#65a30d': 'olive',
+  '#12b76a': 'green', '#0f9d58': 'green', '#6b7090': 'slate'
+};
+
+// What gets stored: a palette name, never a raw hex
+function colorKey(value) {
+  const v = String(value || '').toLowerCase();
+  if (DATA_COLORS[v]) return v;
+  return COLOR_ALIASES[v] || 'slate';
+}
+
+// A negative balance must never be green, whatever the account colour is
+function balanceColor(value, accountColor) {
+  return value < 0 ? 'var(--accent2)' : themeColor(accountColor);
+}
+
+function isLightTheme() {
+  return document.body.classList.contains('light');
+}
+
+// What gets rendered: the tone that suits the current theme
+function themeColor(value) {
+  return DATA_COLORS[colorKey(value)][isLightTheme() ? 1 : 0];
 }
 
 // Built-in categories + the user's own ones (settings.customCats)
 let CATS = BASE_CATS.slice();
 const CAT_ICONS = ['🏷', '🐾', '📚', '✈️', '🍼', '💅', '🎓', '⚽', '🎵', '🔧', '🌱', '☕', '🚌', '📱', '🎬', '🧾'];
-const CAT_COLORS = ['#2f80ed', '#e8763a', '#14b8a6', '#d99000', '#db2777', '#be123c', '#0891b2', '#65a30d', '#12b76a'];
+const CAT_COLORS = ['blue', 'orange', 'teal', 'amber', 'pink', 'crimson', 'cyan', 'olive', 'green'];
 
 function rebuildCats() {
   const reserved = new Set(BASE_CATS.map(c => c.id));
@@ -40,7 +75,7 @@ function rebuildCats() {
       id: String(c.id ?? '').replace(/[^\w-]/g, '') || 'c_' + i,
       label: String(c.label ?? '').trim() || 'Категория',
       icon: String(c.icon ?? '') || '🏷',
-      color: dataColor(String(c.color ?? '')) || CAT_COLORS[i % CAT_COLORS.length]
+      color: colorKey(c.color ?? CAT_COLORS[i % CAT_COLORS.length])
     }))
     .filter(c => !reserved.has(c.id));
   settings.customCats = custom;
@@ -54,19 +89,19 @@ function isCustomCat(id) {
 }
 
 // Transfers are not a spending category — they only move money between accounts
-const TRANSFER_CAT = { id: 'transfer', label: 'Перевод', icon: '🔄', color: '#6b7090' };
+const TRANSFER_CAT = { id: 'transfer', label: 'Перевод', icon: '🔄', color: 'slate' };
 
 function getCat(id) {
-  if (id === 'transfer') return TRANSFER_CAT;
-  return CATS.find(c => c.id === id) || CATS[CATS.length - 1];
+  const cat = id === 'transfer' ? TRANSFER_CAT : (CATS.find(c => c.id === id) || CATS[CATS.length - 1]);
+  return { ...cat, color: themeColor(cat.color) };
 }
 
 const DEFAULT_ACCOUNTS = [
-  { id: 'cash', name: 'Наличные', icon: '💵', color: '#12b76a', initial: 0 },
-  { id: 'card', name: 'Карта', icon: '💳', color: '#2f80ed', initial: 0 }
+  { id: 'cash', name: 'Наличные', icon: '💵', color: 'green', initial: 0 },
+  { id: 'card', name: 'Карта', icon: '💳', color: 'blue', initial: 0 }
 ];
 const ACCOUNT_ICONS = ['💵', '💳', '🏦', '📱', '🪙', '💼', '🧾', '💎'];
-const ACCOUNT_COLORS = ['#12b76a', '#2f80ed', '#e8763a', '#0891b2', '#db2777', '#65a30d'];
+const ACCOUNT_COLORS = ['green', 'blue', 'orange', 'cyan', 'pink', 'olive'];
 
 const INCOME_SOURCES = [
   { id: 'salary', label: 'Зарплата', icon: '💼' },
@@ -84,14 +119,15 @@ let settings = { initialBalance: 0, monthBudget: 0 };
 
 // User-scoped localStorage helpers
 function lsKey(key) {
-  const uid = currentUser ? currentUser.uid : 'guest';
-  return `${uid}_${key}`;
+  // Кэш отдельный для каждого пространства, иначе чужие операции перемешаются
+  return `${spaceUid()}_${key}`;
 }
 function lsGet(key, fallback) {
   try { return JSON.parse(localStorage.getItem(lsKey(key)) || fallback); } catch (e) { return JSON.parse(fallback); }
 }
 function lsSet(key, val) {
-  localStorage.setItem(lsKey(key), JSON.stringify(val));
+  // Приватный режим и заблокированные куки бросают исключение
+  try { localStorage.setItem(lsKey(key), JSON.stringify(val)); } catch (e) { /* без кэша */ }
 }
 let currentType = 'expense';
 let currentCat = 'food';
@@ -111,8 +147,11 @@ let _justSignedIn = false;
 function resetUserState() {
   data = { transactions: [], subscriptions: [] };
   goalsData = [];
+  debtsData = [];
+  _pendingReceiptPhoto = null;
   settings = { initialBalance: 0, monthBudget: 0 };
   _groqKey = null;
+  _groqEndpoint = null;
   compareMonthA = compareMonthB = selectedMonthForAnalytics = null;
   currentAccount = currentAccountTo = null;
   filterAccount = 'all';
@@ -128,7 +167,7 @@ function normalizeAccounts(list) {
     id: String(a.id ?? '').replace(/[^\w-]/g, '') || 'acc_' + i,
     name: String(a.name ?? '').trim() || 'Счёт',
     icon: String(a.icon ?? '') || '💼',
-    color: dataColor(String(a.color ?? '')) || ACCOUNT_COLORS[i % ACCOUNT_COLORS.length],
+    color: colorKey(a.color ?? ACCOUNT_COLORS[i % ACCOUNT_COLORS.length]),
     initial: parseFloat(a.initial) || 0
   }));
 }
@@ -163,7 +202,8 @@ function getAccounts() {
 
 function getAccount(id) {
   const accs = getAccounts();
-  return accs.find(a => a.id === id) || accs[0];
+  const acc = accs.find(a => a.id === id) || accs[0];
+  return { ...acc, color: themeColor(acc.color) };
 }
 
 function defaultAccountId() {
@@ -327,10 +367,10 @@ function renderCustomCats() {
   }
   el.innerHTML = custom.map(c => `
     <div class="cat-edit-row">
-      <button class="cat-edit-icon" style="background:${c.color}22" title="Сменить иконку"
+      <button class="cat-edit-icon" style="background:${themeColor(c.color)}22" title="Сменить иконку"
         onclick="updateCategory('${c.id}','icon')">${escapeHtml(c.icon)}</button>
       <input class="cat-edit-name" value="${escapeHtml(c.label)}" onchange="updateCategory('${c.id}','label',this.value)">
-      <button class="cat-edit-color" style="background:${c.color}" title="Сменить цвет"
+      <button class="cat-edit-color" style="background:${themeColor(c.color)}" title="Сменить цвет"
         onclick="updateCategory('${c.id}','color')"></button>
       <button class="cat-edit-del" title="Удалить категорию" onclick="removeCategory('${c.id}')">${ic('close')}</button>
     </div>`).join('');
@@ -343,11 +383,11 @@ function renderAccountsSettings() {
   const balances = getAccountBalances();
   el.innerHTML = accs.map(a => `
     <div class="acc-row">
-      <button class="acc-row-icon" style="background:${a.color}22" onclick="cycleAccountIcon('${a.id}')"
+      <button class="acc-row-icon" style="background:${themeColor(a.color)}22" onclick="cycleAccountIcon('${a.id}')"
         title="Сменить иконку">${escapeHtml(a.icon)}</button>
       <div class="acc-row-main">
         <input class="acc-row-name" value="${escapeHtml(a.name)}" onchange="updateAccount('${a.id}','name',this.value)">
-        <div class="acc-row-sub">Сейчас: <b style="color:${a.color}">${formatNum(balances[a.id] || 0)} ${CUR()}</b></div>
+        <div class="acc-row-sub">Сейчас: <b style="color:${balanceColor(balances[a.id] || 0, a.color)}">${formatNum(balances[a.id] || 0)} ${CUR()}</b></div>
       </div>
       <input class="acc-row-initial field-input" type="number" inputmode="decimal" title="Начальная сумма"
         value="${a.initial || ''}" placeholder="старт" onchange="updateAccount('${a.id}','initial',this.value)">
@@ -360,10 +400,10 @@ function renderAccountsStrip() {
   if (!el) return;
   const balances = getAccountBalances();
   el.innerHTML = getAccounts().map(a => `
-    <button class="acc-pill" style="--acc-color:${a.color}" onclick="showAccountHistory('${a.id}')">
+    <button class="acc-pill" style="--acc-color:${themeColor(a.color)}" onclick="showAccountHistory('${a.id}')">
       <span class="acc-pill-icon">${escapeHtml(a.icon)}</span>
       <span class="acc-pill-name">${escapeHtml(a.name)}</span>
-      <span class="acc-pill-val" style="color:${a.color}">${formatNum(balances[a.id] || 0)} ${CUR()}</span>
+      <span class="acc-pill-val" style="color:${balanceColor(balances[a.id] || 0, a.color)}">${formatNum(balances[a.id] || 0)} ${CUR()}</span>
     </button>`).join('');
 }
 
@@ -496,6 +536,7 @@ window._onAuthReady = async (user) => {
   if (user) {
     currentUser = user;
     document.getElementById('loginLoading').style.display = 'none';
+    restoreSpace();
     resetUserState();
     loadCache();
 
@@ -524,6 +565,7 @@ window._onAuthReady = async (user) => {
     applyTheme();
     refreshAll();
     checkAlerts();
+    loadShares();
     if (document.getElementById('tab-goals').classList.contains('active')) renderGoals();
 
     if (_justSignedIn) {
@@ -550,9 +592,11 @@ function initApp() {
   // Reset AI text for new user session
   const aiEl = document.getElementById('aiText');
   if (aiEl) aiEl.textContent = 'Нажмите кнопку ниже, чтобы получить персональный анализ';
-  // Reset Groq key cache so new user gets fresh key
+  // Reset Groq caches so a new user gets a fresh key
   _groqKey = null;
+  _groqEndpoint = null;
   hydrateIcons();
+  updateOnlineState();
   renderCatGrid();
   renderSourceGrid();
   renderFilterRow();
@@ -615,6 +659,7 @@ function loadSettings() {
   renderNotifySettings();
   const mb = document.getElementById('monthBudget');
   if (mb) mb.value = settings.monthBudget || '';
+  renderRollover();
   renderAccountsSettings();
   updateCurrencyUI();
   if (currentUser) {
@@ -676,7 +721,7 @@ function switchNav(name, el) {
   if (primaryNavIds.includes(name)) {
     const btn = document.getElementById('nav-' + name);
     if (btn) btn.classList.add('active');
-  } else if (['plan','ai','goals','settings'].includes(name)) {
+  } else if (['plan','ai','goals','debts','settings'].includes(name)) {
     // Highlight "more" button when a secondary tab is active
     const moreBtn = document.getElementById('nav-more');
     if (moreBtn) moreBtn.classList.add('active');
@@ -691,6 +736,7 @@ function switchNav(name, el) {
   if (name === 'history') renderHistory();
   if (name === 'home') renderHome();
   if (name === 'goals') renderGoals();
+  if (name === 'debts') renderDebts();
   if (name === 'ai') renderAiTab();
   if (name === 'plan') renderPlanTab();
 }
@@ -903,6 +949,12 @@ async function addTransaction() {
   settings.lastAccount = currentAccount;
   saveSettingsToFirestore();
 
+  if (_pendingReceiptPhoto) {
+    tx.photo = 1;
+    saveReceiptPhoto(tx.id, _pendingReceiptPhoto);
+    dropPendingReceipt();
+  }
+
   data.transactions.unshift(tx);
   persistTx({ [tx.id]: tx });
   refreshAll();
@@ -919,7 +971,7 @@ async function addTransaction() {
 }
 
 // ==============================
-// QUICK ADD (text / voice / receipt QR)
+// QUICK ADD (text / voice / receipt photo)
 // ==============================
 const CAT_KEYWORDS = {
   food: ['еда', 'обед', 'ужин', 'завтрак', 'кафе', 'ресторан', 'продукт', 'магазин', 'хлеб', 'кофе', 'чай', 'шаурма', 'пицц', 'сомса'],
@@ -927,12 +979,22 @@ const CAT_KEYWORDS = {
   fun: ['кино', 'игр', 'развлеч', 'бар', 'клуб', 'концерт', 'подписк', 'нетфликс'],
   health: ['аптек', 'врач', 'лекарств', 'больниц', 'стомат', 'анализ', 'зуб'],
   gift: ['подар', 'цвет', 'свадьб', 'день рожден'],
-  credit: ['кредит', 'ипотек', 'долг', 'рассрочк', 'займ'],
+  credit: ['кредит', 'ипотек', 'рассрочк', 'займ'],
+  debt: ['долг', 'занял', 'одолжил', 'взаймы'],
   home: ['дом', 'аренд', 'квартир', 'свет', 'газ', 'вода', 'интернет', 'коммунал', 'ремонт'],
   cloth: ['одежд', 'обув', 'куртк', 'джинс', 'футболк', 'кроссов', 'плать'],
   savings: ['накоплен', 'отложи', 'сбереж', 'копилк']
 };
 const INCOME_WORDS = ['зарплат', 'аванс', 'преми', 'доход', 'получил', 'перевели', 'продал', 'выплат', 'кешбэк', 'кэшбэк'];
+
+// Built-in keywords first, then the names of the user's own categories
+function guessCategory(text) {
+  const lower = String(text || '').toLowerCase();
+  const hit = Object.entries(CAT_KEYWORDS).find(([, words]) => words.some(w => lower.includes(w)));
+  if (hit) return hit[0];
+  const own = (settings.customCats || []).find(c => c.label && lower.includes(c.label.toLowerCase()));
+  return own ? own.id : 'other';
+}
 
 // "обед 45" / "+зарплата 5000" -> {amount, name, category, type}
 function parseQuickAdd(raw) {
@@ -948,17 +1010,7 @@ function parseQuickAdd(raw) {
   const isIncome = text.trim().startsWith('+') || INCOME_WORDS.some(w => lower.includes(w));
   name = name.replace(/^\+\s*/, '').trim();
 
-  let category = 'other';
-  if (isIncome) category = 'income';
-  else {
-    const hit = Object.entries(CAT_KEYWORDS).find(([, words]) => words.some(w => lower.includes(w)));
-    if (hit) category = hit[0];
-    else {
-      // user's own categories match by their name
-      const own = (settings.customCats || []).find(c => lower.includes(c.label.toLowerCase()));
-      if (own) category = own.id;
-    }
-  }
+  const category = isIncome ? 'income' : guessCategory(lower);
   return {
     amount,
     name: name ? name.charAt(0).toUpperCase() + name.slice(1) : (isIncome ? 'Доход' : 'Расход'),
@@ -1038,78 +1090,770 @@ function startVoiceInput() {
   }
 }
 
-let _scanStream = null;
-let _scanTimer = null;
+// A live QR scanner needs BarcodeDetector (Chrome only) and a fiscal QR printed
+// on the receipt. A photo works in every browser: the file input opens the
+// camera or the gallery, and a vision model reads the total, date and shop.
 
-async function startQrScan() {
-  if (!('BarcodeDetector' in window)) {
-    showToast('Сканер QR не поддерживается этим браузером', 'error');
-    return;
-  }
-  const video = document.getElementById('scannerVideo');
-  try {
-    _scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-  } catch (e) {
-    showToast('Нет доступа к камере', 'error');
-    return;
-  }
-  video.srcObject = _scanStream;
-  await video.play().catch(() => {});
-  document.getElementById('scannerOverlay').classList.add('show');
+// Groq retires vision models often, so try them in order and keep the first
+// one that answers. Add new names to the front of this list.
+const VISION_MODELS = [
+  'meta-llama/llama-4-scout-17b-16e-instruct',
+  'meta-llama/llama-4-maverick-17b-128e-instruct',
+  'llama-3.2-90b-vision-preview',
+  'llama-3.2-11b-vision-preview'
+];
 
-  const detector = new BarcodeDetector({ formats: ['qr_code'] });
-  _scanTimer = setInterval(async () => {
-    try {
-      const codes = await detector.detect(video);
-      if (codes && codes.length) {
-        const value = codes[0].rawValue;
-        stopQrScan();
-        applyReceipt(value);
-      }
-    } catch (e) { /* frame not ready yet */ }
-  }, 400);
+let _receiptBusy = false;
+let _receiptCancelled = false;
+
+function pickReceipt() {
+  const input = document.getElementById('receiptFile');
+  if (!input) return;
+  input.value = '';   // picking the same photo twice must still fire change
+  input.click();
 }
 
-function stopQrScan() {
-  clearInterval(_scanTimer);
-  _scanTimer = null;
-  if (_scanStream) {
-    _scanStream.getTracks().forEach(t => t.stop());
-    _scanStream = null;
-  }
+// Phone photos are 3-8 MB; the model only needs the text to stay legible
+function fileToCompressedDataUrl(file, maxSide = 1400, quality = 0.75) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      try {
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Не удалось открыть фото')); };
+    img.src = url;
+  });
+}
+
+function closeReceiptScan() {
+  _receiptCancelled = true;
   const overlay = document.getElementById('scannerOverlay');
   if (overlay) overlay.classList.remove('show');
+  const preview = document.getElementById('receiptPreview');
+  if (preview) preview.removeAttribute('src');
 }
 
-// Receipt QR codes carry a query string like t=20260915T1030&s=123.45
-function applyReceipt(raw) {
-  const text = String(raw || '');
-  const params = new URLSearchParams(text.includes('?') ? text.slice(text.indexOf('?') + 1) : text);
-  let amount = parseFloat(String(params.get('s') || '').replace(',', '.'));
-  if (!(amount > 0)) {
-    const any = text.match(/\d+[.,]\d{2}/);
-    amount = any ? parseFloat(any[0].replace(',', '.')) : NaN;
+function receiptStatus(text) {
+  const hint = document.getElementById('scannerHint');
+  if (hint) hint.textContent = text;
+}
+
+async function handleReceiptFile(input) {
+  const file = input && input.files && input.files[0];
+  if (!file || _receiptBusy) return;
+  if (!/^image\//.test(file.type)) { showToast('Нужно фото чека', 'error'); return; }
+  _receiptBusy = true;
+  _receiptCancelled = false;
+  try {
+    const dataUrl = await fileToCompressedDataUrl(file);
+    if (_receiptCancelled) return;
+    const preview = document.getElementById('receiptPreview');
+    if (preview) preview.src = dataUrl;
+    const overlay = document.getElementById('scannerOverlay');
+    if (overlay) overlay.classList.add('show');
+    receiptStatus('Читаю чек…');
+
+    const answer = await readReceiptPhoto(dataUrl);
+    if (_receiptCancelled) return;
+    // Снимок для хранения мельче того, что ушёл в модель
+    const stored = await fileToCompressedDataUrl(file, 900, 0.55).catch(() => null);
+    const parsed = parseReceiptJson(answer);
+    if (!parsed) {
+      showToast('Не разобрал чек — впишите вручную', 'error');
+      switchNav('add', null);
+      return;
+    }
+    applyReceiptData(parsed);
+    if (stored) showPendingReceipt(stored);
+  } catch (e) {
+    if (!_receiptCancelled) showToast(receiptErrorText(e), 'error');
+  } finally {
+    _receiptBusy = false;
+    closeReceiptScan();
   }
+}
 
-  let date = dateKey();
-  const t = params.get('t') || '';
-  const md = t.match(/^(\d{4})(\d{2})(\d{2})/);
-  if (md) date = `${md[1]}-${md[2]}-${md[3]}`;
+function receiptErrorText(e) {
+  const msg = (e && e.message) || '';
+  if (!navigator.onLine) return 'Нет интернета — чек не прочитать';
+  if (/ключ/i.test(msg)) return msg;
+  return 'Не получилось прочитать чек: ' + (msg || 'ошибка сети');
+}
 
+async function readReceiptPhoto(dataUrl) {
+  const cats = CATS.filter(c => c.id !== 'income').map(c => c.id + ' — ' + c.label).join(', ');
+  const prompt =
+    'На фото кассовый чек. Верни ТОЛЬКО JSON, без пояснений и markdown:\n' +
+    '{"amount": число, "date": "ГГГГ-ММ-ДД", "name": "строка", "category": "строка"}\n' +
+    'amount — итоговая сумма к оплате (строка ИТОГО / ВСЕГО / К ОПЛАТЕ), точка как разделитель, без пробелов.\n' +
+    'date — дата чека. name — магазин или главный товар, 1-3 слова.\n' +
+    'category — один id из списка: ' + cats + '\n' +
+    'Если чего-то не видно на фото — поставь null.';
+
+  let lastErr = null;
+  for (const model of VISION_MODELS) {
+    try {
+      const json = await groqRequest({
+        model,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: dataUrl } }
+          ]
+        }],
+        max_tokens: 300,
+        temperature: 0
+      });
+      const text = json.choices && json.choices[0] && json.choices[0].message.content;
+      if (text) return text;
+      lastErr = new Error('Пустой ответ модели');
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('Сервис распознавания не ответил');
+}
+
+// The model sometimes wraps the JSON in a sentence or a code fence
+function parseReceiptJson(text) {
+  const raw = String(text || '');
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+  let obj;
+  try { obj = JSON.parse(raw.slice(start, end + 1)); } catch (e) { return null; }
+  if (!obj || typeof obj !== 'object') return null;
+
+  const amount = Math.abs(parseFloat(String(obj.amount ?? '').replace(/[\s\u00a0]/g, '').replace(',', '.')));
+  if (!(amount > 0) || !isFinite(amount)) return null;
+
+  const date = isDateKey(obj.date) ? obj.date : dateKey();
+  let name = String(obj.name ?? '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  if (!name || name.toLowerCase() === 'null') name = 'Покупка по чеку';
+  const category = CATS.some(c => c.id === obj.category && c.id !== 'income')
+    ? obj.category
+    : guessCategory(name);
+  return { amount, date, name, category };
+}
+
+// Never saves on its own: the form opens filled in so the user can check it
+function applyReceiptData(receipt) {
   switchNav('add', null);
   setType('expense');
-  document.getElementById('noteInput').value = 'Чек: ' + text.slice(0, 80);
-  document.getElementById('dateInput').value = date;
+  selectCat(receipt.category);
+  document.getElementById('amountInput').value = receipt.amount;
+  document.getElementById('dateInput').value = receipt.date;
+  document.getElementById('nameInput').value = receipt.name;
+  document.getElementById('noteInput').value = 'Распознано с фото чека';
+  showToast(receipt.name + ' · ' + formatNum(receipt.amount) + ' ' + CUR() + ' — проверьте и сохраните', 'success');
+}
 
-  if (!(amount > 0)) {
-    showToast('В QR нет суммы — впишите вручную', 'error');
+// ==============================
+// DEBTS
+// ==============================
+// Долг — не расход: деньги ушли, но их обещали вернуть. Поэтому долг живёт
+// отдельным списком, а движение денег идёт обычной операцией по счёту.
+let debtType = 'lent';
+
+function saveDebtsData() {
+  lsSet('debts_data', debtsData);
+  if (currentUser && window._fbSet) {
+    window._fbSet(window._fbRef(window._fbDb, userPath('debts')), debtsData || [])
+      .catch(e => console.warn('RTDB debts save error:', e));
+  }
+}
+
+function setDebtType(type) {
+  debtType = type === 'borrowed' ? 'borrowed' : 'lent';
+  const lent = document.getElementById('debtTypeLent');
+  const borrowed = document.getElementById('debtTypeBorrowed');
+  if (lent) lent.classList.toggle('selected', debtType === 'lent');
+  if (borrowed) borrowed.classList.toggle('selected', debtType === 'borrowed');
+  const label = document.getElementById('debtPersonLabel');
+  if (label) label.textContent = debtType === 'lent' ? 'Кому дали' : 'У кого взяли';
+}
+
+function accountOptions(selected) {
+  return getAccounts().map(a =>
+    `<option value="${a.id}"${a.id === (selected || defaultAccountId()) ? ' selected' : ''}>${escapeHtml(a.icon + ' ' + a.name)}</option>`
+  ).join('');
+}
+
+function openDebtForm() {
+  const card = document.getElementById('debtFormCard');
+  if (!card) return;
+  const acc = document.getElementById('debtAccount');
+  if (acc) acc.innerHTML = accountOptions();
+  setDebtType('lent');
+  card.style.display = '';
+  card.scrollIntoView({ behavior: 'smooth' });
+}
+
+function debtLeft(debt) {
+  return Math.max(Number(debt.amount) - Number(debt.returned || 0), 0);
+}
+
+// Сколько дней осталось до возврата: отрицательное — просрочено
+function daysUntil(key) {
+  if (!isDateKey(key)) return null;
+  const today = parseDateKey(dateKey());
+  return Math.round((parseDateKey(key) - today) / 86400000);
+}
+
+function debtTx(debt, amount, type, accountId, title) {
+  const tx = normalizeTx({
+    id: newId(),
+    date: dateKey(),
+    name: title + ': ' + debt.person,
+    amount,
+    type,
+    category: type === 'expense' ? 'debt' : 'income',
+    account: accountId || debt.account || defaultAccountId(),
+    note: '🤝',
+    debtId: debt.id
+  });
+  if (!tx) return;
+  data.transactions.unshift(tx);
+  persistTx({ [tx.id]: tx });
+}
+
+function saveNewDebt() {
+  const person = document.getElementById('debtPerson').value.trim();
+  const amount = Math.abs(parseFloat(document.getElementById('debtAmount').value));
+  const due = document.getElementById('debtDue').value;
+  const accSelect = document.getElementById('debtAccount');
+  const account = accSelect && accSelect.value ? accSelect.value : defaultAccountId();
+
+  if (!person) { showToast('Укажите имя ❌', 'error'); return; }
+  if (!(amount > 0) || !isFinite(amount)) { showToast('Введите сумму ❌', 'error'); return; }
+
+  const debt = {
+    id: 'debt_' + Date.now().toString(36),
+    type: debtType,
+    person: person.slice(0, 40),
+    amount,
+    returned: 0,
+    date: dateKey(),
+    due: isDateKey(due) ? due : '',
+    account
+  };
+  debtsData.unshift(debt);
+  saveDebtsData();
+  debtTx(debt, amount, debt.type === 'lent' ? 'expense' : 'income', account,
+    debt.type === 'lent' ? 'В долг' : 'Занял у');
+
+  document.getElementById('debtPerson').value = '';
+  document.getElementById('debtAmount').value = '';
+  document.getElementById('debtDue').value = '';
+  document.getElementById('debtFormCard').style.display = 'none';
+  setDebtType('lent');
+  renderDebts();
+  refreshAll();
+  renderHistory();
+  showToast(debt.type === 'lent' ? 'Записал: вам должны' : 'Записал: вы должны', 'success');
+}
+
+// Пустое поле суммы = вернули всё
+function repayDebt(id) {
+  const debt = debtsData.find(d => d.id === id);
+  if (!debt) return;
+  const left = debtLeft(debt);
+  if (left <= 0) return;
+
+  const input = document.getElementById('rep-' + id);
+  let amount = parseFloat(input && input.value);
+  if (!(amount > 0) || !isFinite(amount)) amount = left;
+  amount = Math.min(amount, left);
+
+  debt.returned = Number(debt.returned || 0) + amount;
+  if (debtLeft(debt) < 0.005) {
+    debt.returned = debt.amount;
+    debt.closed = dateKey();
+  }
+  saveDebtsData();
+
+  const accSelect = document.getElementById('repacc-' + id);
+  debtTx(debt, amount, debt.type === 'lent' ? 'income' : 'expense',
+    accSelect && accSelect.value, debt.type === 'lent' ? 'Вернул долг' : 'Отдал долг');
+
+  renderDebts();
+  refreshAll();
+  renderHistory();
+  showToast(debt.closed
+    ? (debt.type === 'lent' ? 'Долг закрыт ✓' : 'Рассчитались ✓')
+    : `${formatNum(amount)} ${CUR()} — осталось ${formatNum(debtLeft(debt))}`, 'success');
+}
+
+function deleteDebt(id) {
+  const debt = debtsData.find(d => d.id === id);
+  if (!debt) return;
+  openConfirm({
+    icon: 'trash',
+    title: 'Убрать долг из списка?',
+    text: 'Операции по счёту останутся — деньги ведь правда двигались.',
+    okText: 'Убрать',
+    onOk: () => {
+      debtsData = debtsData.filter(d => d.id !== id);
+      saveDebtsData();
+      renderDebts();
+      showToast('Долг убран', 'error');
+    }
+  });
+}
+
+function renderDebts() {
+  const list = document.getElementById('debtsList');
+  if (!list) return;
+  const cur = CUR();
+  const open = debtsData.filter(d => !d.closed);
+  const owedToMe = open.filter(d => d.type === 'lent').reduce((s, d) => s + debtLeft(d), 0);
+  const iOwe = open.filter(d => d.type === 'borrowed').reduce((s, d) => s + debtLeft(d), 0);
+
+  const totals = document.getElementById('debtTotals');
+  if (totals) {
+    totals.innerHTML = `
+      <div class="debt-total-card">
+        <div class="debt-total-label">Мне должны</div>
+        <div class="debt-total-value" style="color:var(--accent3)">${formatNum(owedToMe)} ${cur}</div>
+      </div>
+      <div class="debt-total-card">
+        <div class="debt-total-label">Я должен</div>
+        <div class="debt-total-value" style="color:var(--accent2)">${formatNum(iOwe)} ${cur}</div>
+      </div>`;
+  }
+
+  if (!debtsData.length) {
+    list.innerHTML = '<div class="empty-state"><div class="es-icon">🤝</div><p>Долгов нет</p>' +
+      '<p style="font-size:12px;color:var(--text2)">Записывайте, кому дали и у кого взяли — сумма спишется со счёта</p></div>';
     return;
   }
-  document.getElementById('amountInput').value = amount;
-  if (!document.getElementById('nameInput').value.trim()) {
-    document.getElementById('nameInput').value = 'Покупка по чеку';
+
+  // Открытые сверху, закрытые в конце
+  const sorted = [...debtsData].sort((a, b) =>
+    (a.closed ? 1 : 0) - (b.closed ? 1 : 0) || String(b.date).localeCompare(String(a.date)));
+
+  list.innerHTML = sorted.map(d => {
+    const left = debtLeft(d);
+    const lent = d.type === 'lent';
+    const color = lent ? 'var(--accent3)' : 'var(--accent2)';
+    const days = d.closed ? null : daysUntil(d.due);
+    let due = '';
+    if (days !== null && days !== undefined) {
+      due = days < 0
+        ? ` · <span class="debt-due-late">просрочено на ${Math.abs(days)} дн.</span>`
+        : days === 0 ? ' · <span class="debt-due-late">вернуть сегодня</span>'
+          : ` · вернуть через ${days} дн.`;
+    }
+    const partial = d.returned > 0 && !d.closed ? ` · вернули ${formatNum(d.returned)} из ${formatNum(d.amount)}` : '';
+
+    return `<div class="debt-card${d.closed ? ' closed' : ''}">
+  <div class="debt-head">
+    <span class="debt-person">${lent ? '→' : '←'} ${escapeHtml(d.person)}</span>
+    <span class="debt-amount" style="color:${color}">${formatNum(d.closed ? d.amount : left)} ${cur}</span>
+    <button class="debt-del" title="Убрать" onclick="deleteDebt('${d.id}')">${ic('trash')}</button>
+  </div>
+  <div class="debt-meta">${d.closed
+      ? `закрыт ${escapeHtml(d.closed)}`
+      : `${lent ? 'дали' : 'взяли'} ${escapeHtml(d.date)}${partial}${due}`}</div>
+  ${d.closed ? '' : `<div class="debt-repay-row">
+    <input class="field-input" type="number" inputmode="decimal" id="rep-${d.id}" placeholder="Всё (${formatNum(left)})">
+    <select class="field-input" id="repacc-${d.id}">${accountOptions(d.account)}</select>
+    <button class="debt-repay-btn" onclick="repayDebt('${d.id}')">${lent ? 'Вернули' : 'Отдал'}</button>
+  </div>`}
+</div>`;
+  }).join('');
+}
+
+// ---- фото чека хранится отдельно от операции ------------------------
+// В transactions лежит только флаг photo: иначе каждая синхронизация тянула бы
+// все снимки разом. Сам снимок — в receipts/<id>, читается по требованию.
+let _pendingReceiptPhoto = null;
+
+function receiptPath(txId) {
+  return userPath('receipts/' + String(txId).replace(/[^\w-]/g, ''));
+}
+
+async function saveReceiptPhoto(txId, dataUrl) {
+  lsSet('receipt_' + txId, dataUrl);
+  if (!currentUser || !window._fbSet) return;
+  try {
+    await window._fbSet(window._fbRef(window._fbDb, receiptPath(txId)), dataUrl);
+  } catch (e) {
+    console.warn('RTDB receipt save error:', e);
   }
-  showToast(`Сумма из чека: ${formatNum(amount)} ${CUR()} ✓`, 'success');
+}
+
+async function loadReceiptPhoto(txId) {
+  const cached = lsGet('receipt_' + txId, 'null');
+  if (typeof cached === 'string' && cached) return cached;
+  if (!currentUser || !window._fbGet) return null;
+  try {
+    const snap = await window._fbGet(window._fbRef(window._fbDb, receiptPath(txId)));
+    const val = snap.exists() ? snap.val() : null;
+    if (val) lsSet('receipt_' + txId, val);
+    return val;
+  } catch (e) {
+    console.warn('RTDB receipt load error:', e);
+    return null;
+  }
+}
+
+function forgetReceipts(txs) {
+  (txs || []).filter(t => t && t.photo).forEach(t => {
+    try { localStorage.removeItem(lsKey('receipt_' + t.id)); } catch (e) { /* приватный режим */ }
+    if (currentUser && window._fbSet) {
+      window._fbSet(window._fbRef(window._fbDb, receiptPath(t.id)), null).catch(() => {});
+    }
+  });
+}
+
+function showPendingReceipt(dataUrl) {
+  _pendingReceiptPhoto = dataUrl;
+  const chip = document.getElementById('receiptChip');
+  const img = document.getElementById('receiptChipImg');
+  if (img) img.src = dataUrl;
+  if (chip) chip.style.display = dataUrl ? 'flex' : 'none';
+}
+
+function dropPendingReceipt() {
+  _pendingReceiptPhoto = null;
+  const chip = document.getElementById('receiptChip');
+  if (chip) chip.style.display = 'none';
+  const img = document.getElementById('receiptChipImg');
+  if (img) img.removeAttribute('src');
+}
+
+// ---- прикрепить снимок к уже сохранённой операции -------------------
+async function attachReceiptToTx(input) {
+  const file = input && input.files && input.files[0];
+  if (!file || !editingTxId) return;
+  input.value = '';
+  if (!/^image\//.test(file.type)) { showToast('Нужно фото', 'error'); return; }
+  const tx = data.transactions.find(t => t.id === editingTxId);
+  if (!tx) return;
+  try {
+    const dataUrl = await fileToCompressedDataUrl(file, 900, 0.55);
+    await saveReceiptPhoto(tx.id, dataUrl);
+    tx.photo = 1;
+    persistTx({ [tx.id]: tx });
+    renderEditPhoto(dataUrl);
+    renderHistory();
+    showToast('Чек прикреплён ✓', 'success');
+  } catch (e) {
+    showToast('Не получилось прикрепить фото', 'error');
+  }
+}
+
+function renderEditPhoto(dataUrl) {
+  const img = document.getElementById('editPhotoImg');
+  const add = document.getElementById('editPhotoAdd');
+  const del = document.getElementById('editPhotoDel');
+  if (!img || !add || !del) return;
+  if (dataUrl) {
+    img.src = dataUrl;
+    img.style.display = '';
+    add.style.display = 'none';
+    del.style.display = '';
+  } else {
+    img.removeAttribute('src');
+    img.style.display = 'none';
+    add.style.display = '';
+    del.style.display = 'none';
+  }
+}
+
+function removeReceiptPhoto() {
+  const tx = data.transactions.find(t => t.id === editingTxId);
+  if (!tx) return;
+  forgetReceipts([{ id: tx.id, photo: 1 }]);
+  delete tx.photo;
+  persistTx({ [tx.id]: tx });
+  renderEditPhoto(null);
+  renderHistory();
+  showToast('Фото убрано', 'error');
+}
+
+// ==============================
+// SHARED ACCESS
+// ==============================
+// Приглашённый человек работает в чужом пространстве: меняется только путь
+// в базе (userPath) и ключ кэша (lsKey). Вход и аккаунт остаются своими.
+let activeSpaceUid = null;
+let shareSpaces = [];    // куда меня пригласили: [{ uid, name, email }]
+let shareMembers = [];   // кого я пригласил: [{ uid, since }]
+
+function ownUid() {
+  return currentUser ? currentUser.uid : '';
+}
+
+function spaceStorageKey() {
+  return 'active_space_' + ownUid();
+}
+
+function rememberSpace(uid) {
+  try {
+    if (uid) localStorage.setItem(spaceStorageKey(), uid);
+    else localStorage.removeItem(spaceStorageKey());
+  } catch (e) { /* без кэша */ }
+}
+
+function restoreSpace() {
+  try {
+    const saved = localStorage.getItem(spaceStorageKey());
+    activeSpaceUid = saved && saved !== ownUid() ? saved : null;
+  } catch (e) {
+    activeSpaceUid = null;
+  }
+}
+
+function copyShareCode() {
+  const code = ownUid();
+  if (!code) return;
+  navigator.clipboard?.writeText(code)
+    .then(() => showToast('Код скопирован ✓', 'success'))
+    .catch(() => showToast(code, 'success'));
+}
+
+// Список приглашений лежит в shares/<мой uid> — его пишет тот, кто приглашает
+async function loadShares() {
+  shareSpaces = [];
+  shareMembers = [];
+  if (!currentUser || !window._fbGet) return;
+  try {
+    const snap = await window._fbGet(window._fbRef(window._fbDb, 'shares/' + ownUid()));
+    if (snap.exists() && snap.val()) {
+      shareSpaces = Object.entries(snap.val())
+        .filter(([uid, v]) => uid && v)
+        .map(([uid, v]) => ({ uid, name: (v && v.name) || 'Общий бюджет', email: (v && v.email) || '' }));
+    }
+  } catch (e) {
+    console.warn('shares load error:', e);
+  }
+  try {
+    const mine = await window._fbGet(window._fbRef(window._fbDb, `users/${ownUid()}/members`));
+    if (mine.exists() && mine.val()) {
+      shareMembers = Object.entries(mine.val())
+        .filter(([uid, v]) => uid && v)
+        .map(([uid, v]) => ({ uid, name: (v && v.name) || '', since: (v && v.since) || '' }));
+    }
+  } catch (e) {
+    console.warn('members load error:', e);
+  }
+  renderShareSettings();
+}
+
+async function addShareMember() {
+  const input = document.getElementById('shareCodeInput');
+  const uid = (input.value || '').trim();
+  if (!uid) { showToast('Вставьте код ❌', 'error'); return; }
+  if (uid === ownUid()) { showToast('Это ваш собственный код', 'error'); return; }
+  if (!/^[A-Za-z0-9_-]{6,128}$/.test(uid)) { showToast('Код выглядит неправильно ❌', 'error'); return; }
+  if (activeSpaceUid) { showToast('Сначала вернитесь в свой бюджет', 'error'); return; }
+  if (!window._fbSet) { showToast('Нет связи с базой', 'error'); return; }
+
+  const member = { name: '', since: dateKey() };
+  try {
+    // Кому я открыл доступ
+    await window._fbSet(window._fbRef(window._fbDb, `users/${ownUid()}/members/${uid}`), member);
+    // Приглашение, которое он увидит у себя
+    await window._fbSet(window._fbRef(window._fbDb, `shares/${uid}/${ownUid()}`), {
+      name: currentUser.displayName || 'Общий бюджет',
+      email: currentUser.email || ''
+    });
+  } catch (e) {
+    showToast('Не вышло: проверьте правила базы', 'error');
+    console.warn('share add error:', e);
+    return;
+  }
+  shareMembers.push({ uid, name: '', since: member.since });
+  input.value = '';
+  renderShareSettings();
+  showToast('Доступ открыт ✓', 'success');
+}
+
+function removeShareMember(uid) {
+  openConfirm({
+    icon: 'trash',
+    title: 'Закрыть доступ?',
+    text: 'Человек перестанет видеть ваши операции.',
+    okText: 'Закрыть',
+    onOk: async () => {
+      try {
+        await window._fbSet(window._fbRef(window._fbDb, `users/${ownUid()}/members/${uid}`), null);
+        await window._fbSet(window._fbRef(window._fbDb, `shares/${uid}/${ownUid()}`), null);
+      } catch (e) {
+        console.warn('share remove error:', e);
+      }
+      shareMembers = shareMembers.filter(m => m.uid !== uid);
+      renderShareSettings();
+      showToast('Доступ закрыт', 'error');
+    }
+  });
+}
+
+// Переключение пространства — это полная перезагрузка данных
+async function switchSpace(uid) {
+  const target = uid === ownUid() ? null : uid;
+  if (target === activeSpaceUid) return;
+
+  if (target) {
+    // Проверяем доступ заранее: иначе приложение молча показало бы пустой бюджет
+    try {
+      await window._fbGet(window._fbRef(window._fbDb, `users/${target}/settings`));
+    } catch (e) {
+      showToast('Нет доступа. Обновите правила базы — см. README', 'error');
+      console.warn('space check failed:', e);
+      return;
+    }
+  }
+
+  activeSpaceUid = target;
+  rememberSpace(target);
+  resetUserState();
+  loadCache();
+  initApp();
+  await loadFromDB();
+  loadSettings();
+  applyTheme();
+  refreshAll();
+  renderHistory();
+  renderShareSettings();
+  showToast(target ? 'Открыт общий бюджет' : 'Вернулись в свой бюджет', 'success');
+}
+
+function renderShareSettings() {
+  const code = document.getElementById('myShareCode');
+  if (code) code.textContent = ownUid() ? ownUid().slice(0, 10) + '…' : '—';
+
+  const members = document.getElementById('shareMembers');
+  if (members) {
+    members.innerHTML = shareMembers.length
+      ? '<div class="settings-hint" style="margin:14px 0 0">Вы открыли доступ:</div>' + shareMembers.map(m => `
+        <div class="share-row">
+          <span class="share-name">${escapeHtml(m.uid.slice(0, 12))}…<div class="share-sub">${escapeHtml(m.since || '')}</div></span>
+          <button onclick="removeShareMember('${escapeHtml(m.uid)}')">Закрыть</button>
+        </div>`).join('')
+      : '';
+  }
+
+  const spaces = document.getElementById('shareSpaces');
+  if (!spaces) return;
+  if (!shareSpaces.length) { spaces.innerHTML = ''; return; }
+  const rows = [{ uid: ownUid(), name: 'Мой бюджет', email: '' }].concat(shareSpaces);
+  spaces.innerHTML = '<div class="settings-hint" style="margin:14px 0 0">Доступные бюджеты:</div>' + rows.map(s => {
+    const active = (s.uid === ownUid() && !activeSpaceUid) || s.uid === activeSpaceUid;
+    return `<div class="share-row">
+      <span class="share-name">${escapeHtml(s.name)}<div class="share-sub">${escapeHtml(s.email)}</div></span>
+      <button class="${active ? 'active-space' : ''}" onclick="switchSpace('${escapeHtml(s.uid)}')">${active ? 'Открыт' : 'Открыть'}</button>
+    </div>`;
+  }).join('');
+}
+
+// ==============================
+// УСТАНОВКА И СВЯЗЬ
+// ==============================
+let _installPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  // Браузер готов предложить установку — показываем свою кнопку
+  e.preventDefault();
+  _installPrompt = e;
+  const card = document.getElementById('installCard');
+  if (card) card.style.display = '';
+});
+
+window.addEventListener('appinstalled', () => {
+  _installPrompt = null;
+  const card = document.getElementById('installCard');
+  if (card) card.style.display = 'none';
+});
+
+async function installApp() {
+  if (!_installPrompt) {
+    showToast('Браузер не предлагает установку — добавьте через меню браузера', 'error');
+    return;
+  }
+  const prompt = _installPrompt;
+  _installPrompt = null;
+  prompt.prompt();
+  const choice = await prompt.userChoice.catch(() => null);
+  const card = document.getElementById('installCard');
+  if (card) card.style.display = 'none';
+  if (choice && choice.outcome === 'accepted') showToast('Приложение устанавливается ✓', 'success');
+}
+
+// Firebase сам доотправит записи, но человек должен видеть, что связи нет
+function updateOnlineState() {
+  const bar = document.getElementById('offlineBar');
+  if (bar) bar.classList.toggle('show', !navigator.onLine);
+}
+
+window.addEventListener('offline', updateOnlineState);
+window.addEventListener('online', () => {
+  updateOnlineState();
+  showToast('Связь вернулась ✓', 'success');
+});
+
+// ==============================
+// ПЕРЕНОС ОСТАТКА БЮДЖЕТА
+// ==============================
+// Переносим только прошлый месяц, а не всю историю: так остаток предсказуем.
+function budgetCarry() {
+  const base = settings.monthBudget || 0;
+  if (!settings.planRollover || base <= 0) return 0;
+  const now = new Date();
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const key = `${prev.getFullYear()}-${pad2(prev.getMonth() + 1)}`;
+  const prevTx = data.transactions.filter(t => String(t.date).startsWith(key));
+  // В месяце вообще нет записей — приложением тогда не пользовались, переносить нечего
+  if (!prevTx.length) return 0;
+  const spent = prevTx
+    .filter(t => t.type === 'expense')
+    .reduce((s, t) => s + t.amount, 0);
+  return Math.round((base - spent) * 100) / 100;
+}
+
+function activeBudget() {
+  return Math.max((settings.monthBudget || 0) + budgetCarry(), 0);
+}
+
+function toggleRollover() {
+  const box = document.getElementById('planRollover');
+  settings.planRollover = !!(box && box.checked);
+  saveSettingsToFirestore();
+  renderPlanTab();
+  refreshAll();
+}
+
+function renderRollover() {
+  const box = document.getElementById('planRollover');
+  if (box) box.checked = !!settings.planRollover;
+  const note = document.getElementById('planRolloverNote');
+  if (!note) return;
+  if (!settings.planRollover) { note.textContent = ''; return; }
+  const carry = budgetCarry();
+  const cur = CUR();
+  if (!settings.monthBudget) {
+    note.textContent = 'Сначала укажите бюджет месяца.';
+  } else if (carry > 0) {
+    note.textContent = `В прошлом месяце осталось ${formatNum(carry)} ${cur} — они добавлены: бюджет ${formatNum(activeBudget())} ${cur}.`;
+  } else if (carry < 0) {
+    note.textContent = `В прошлом месяце перерасход ${formatNum(-carry)} ${cur} — вычтен: бюджет ${formatNum(activeBudget())} ${cur}.`;
+  } else {
+    note.textContent = 'Прошлый месяц закрыт ровно по бюджету.';
+  }
 }
 
 // ==============================
@@ -1164,6 +1908,8 @@ function renderHome() {
   const s = getStats('current_month_strict');
 
   animateNumber('balanceAmount', s.balance);
+  const balEl = document.getElementById('balanceAmount');
+  if (balEl) balEl.style.color = s.balance < 0 ? 'var(--accent2)' : '';
   animateNumber('totalIncome', s.totalIncome);
   animateNumber('totalExpense', s.totalExpense);
   document.getElementById('totalTx').textContent = data.transactions.length;
@@ -1179,8 +1925,8 @@ function renderHome() {
     }
   }
 
-  if (settings.monthBudget > 0) {
-    const pct = Math.min((s.expense / settings.monthBudget) * 100, 100);
+  if (activeBudget() > 0) {
+    const pct = Math.min((s.expense / activeBudget()) * 100, 100);
     document.getElementById('budgetProgress').style.display = 'block';
     document.getElementById('budgetPercent').textContent = Math.round(pct) + '%';
     const fill = document.getElementById('bpFill');
@@ -1744,7 +2490,25 @@ function dayLabel(dateStr) {
   return parseDateKey(dateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'short' });
 }
 
-function renderHistory() {
+// A year of daily records is ~1500 rows: render a page at a time
+const HISTORY_PAGE = 150;
+let historyShown = HISTORY_PAGE;
+let _searchTimer = null;
+
+// Typing rebuilt the whole list on every keystroke
+function onSearchInput() {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => renderHistory(), 200);
+}
+
+function showMoreHistory() {
+  historyShown += HISTORY_PAGE;
+  renderHistory(true);
+}
+
+function renderHistory(keepPage) {
+  // Any filter change starts the list from the top again
+  if (keepPage !== true) historyShown = HISTORY_PAGE;
   const search = document.getElementById('searchInput').value.toLowerCase();
   const from = document.getElementById('histFrom')?.value || '';
   const to = document.getElementById('histTo')?.value || '';
@@ -1777,9 +2541,14 @@ function renderHistory() {
     return;
   }
 
+  // Newest first, then only the visible page
+  txs.sort(compareTx);
+  const hidden = Math.max(0, txs.length - historyShown);
+  const page = hidden ? txs.slice(0, historyShown) : txs;
+
   // Group by day, newest first
   const byDay = {};
-  txs.forEach(t => { (byDay[t.date] = byDay[t.date] || []).push(t); });
+  page.forEach(t => { (byDay[t.date] = byDay[t.date] || []).push(t); });
   let i = 0;
   list.innerHTML = Object.keys(byDay).sort().reverse().map(date => {
     const dayTxs = byDay[date];
@@ -1797,6 +2566,12 @@ function renderHistory() {
   ${dayTxs.map(tx => renderTxItem(tx, i++)).join('')}
 </div>`;
   }).join('');
+
+  if (hidden) {
+    list.innerHTML += `<button class="show-more-btn" onclick="showMoreHistory()">
+      Показать ещё <span>· осталось ${formatNum(hidden)}</span>
+    </button>`;
+  }
   attachSwipeListeners(list);
 }
 
@@ -1937,8 +2712,12 @@ function offerUndo(txs, label) {
   document.getElementById('undoBar').classList.add('show');
 }
 
-function hideUndo() {
-  if (_undo) clearTimeout(_undo.timer);
+function hideUndo(keepPhotos) {
+  if (_undo) {
+    clearTimeout(_undo.timer);
+    // Окно отмены закрылось — снимки удалённых операций больше не нужны
+    if (!keepPhotos) forgetReceipts(_undo.txs);
+  }
   _undo = null;
   const bar = document.getElementById('undoBar');
   if (bar) bar.classList.remove('show');
@@ -1947,7 +2726,7 @@ function hideUndo() {
 function undoDelete() {
   if (!_undo) return;
   const txs = _undo.txs;
-  hideUndo();
+  hideUndo(true);
   data.transactions.push(...txs);
   persistTx(txMap(txs));
   refreshAll();
@@ -1984,6 +2763,7 @@ function closeConfirm() {
 // ==============================
 const GOAL_EMOJIS = ['🎯', '📱', '✈️', '🚗', '🏠', '💻', '👟', '🎮', '📚', '💍', '🌴', '🏋️', '🎸', '📷', '💰'];
 let goalsData = [];
+let debtsData = [];
 let selectedGoalEmoji = '🎯';
 
 function saveGoalsData() { saveGoalsToFirestore(); }
@@ -2034,12 +2814,12 @@ function renderGoals() {
     return;
   }
 
-  const COLORS = ['#2f80ed', '#12b76a', '#e8763a', '#0891b2', '#db2777', '#65a30d'];
+  const COLORS = ['blue', 'green', 'orange', 'cyan', 'pink', 'olive'];
 
   list.innerHTML = goalsData.map((g, idx) => {
     const pct = Math.min(Math.round((g.saved / g.target) * 100), 100);
     const remaining = Math.max(g.target - g.saved, 0);
-    const color = COLORS[idx % COLORS.length];
+    const color = themeColor(COLORS[idx % COLORS.length]);
     const done = pct >= 100;
 
     let deadlineStr = '';
@@ -2214,6 +2994,12 @@ function openEditModal(txId) {
     });
   }
 
+  renderEditPhoto(null);
+  if (tx.photo) loadReceiptPhoto(tx.id).then(url => {
+    // Пока грузили, пользователь мог открыть другую запись
+    if (url && editingTxId === txId) renderEditPhoto(url);
+  });
+
   document.getElementById('editModal').classList.add('show');
 }
 
@@ -2300,6 +3086,7 @@ const ICONS = {
   bell: '<path d="M18 16v-5a6 6 0 10-12 0v5l-2 3h16l-2-3z"/><path d="M10 21a2 2 0 004 0"/>',
   logout: '<path d="M10 4H6a2 2 0 00-2 2v12a2 2 0 002 2h4"/><path d="M16 17l5-5-5-5M21 12H10"/>',
   shield: '<path d="M12 3l8 3v6c0 4.5-3.2 7.9-8 9-4.8-1.1-8-4.5-8-9V6z"/>',
+  users: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20v-1a6 6 0 0112 0v1"/><path d="M16 5.2a3.2 3.2 0 010 5.6"/><path d="M18 20v-1a6 6 0 00-2-4.5"/>',
   wallet: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="17" cy="14" r="1.3" fill="currentColor" stroke="none"/>',
   tag: '<path d="M20 12l-8 8-8-8V4h8l8 8z"/><circle cx="7.6" cy="7.6" r="1.2" fill="currentColor" stroke="none"/>',
   target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>',
@@ -2435,8 +3222,13 @@ function showToast(msg, type = 'success') {
 // ==============================
 let currentUser = null;
 
+// Чьи данные сейчас открыты: свои или те, куда вас пригласили
+function spaceUid() {
+  return activeSpaceUid || (currentUser ? currentUser.uid : 'guest');
+}
+
 function userPath(sub) {
-  return `users/${currentUser.uid}/${sub}`;
+  return `users/${spaceUid()}/${sub}`;
 }
 
 // Remove undefined values — Firebase doesn't accept them
@@ -2510,6 +3302,8 @@ function loadCache() {
   };
   const cachedGoals = lsGet('goals_data', '[]');
   goalsData = Array.isArray(cachedGoals) ? cachedGoals : [];
+  const cachedDebts = lsGet('debts_data', '[]');
+  debtsData = Array.isArray(cachedDebts) ? cachedDebts : [];
 }
 
 async function loadFromDB() {
@@ -2543,6 +3337,15 @@ async function loadFromDB() {
       goalsData = [];
     }
     lsSet('goals_data', goalsData);
+
+    const debtsSnap = await window._fbGet(window._fbChild(dbRef, userPath('debts')));
+    if (debtsSnap.exists() && debtsSnap.val()) {
+      const val = debtsSnap.val();
+      debtsData = Array.isArray(val) ? val.filter(Boolean) : Object.values(val).filter(Boolean);
+    } else {
+      debtsData = [];
+    }
+    lsSet('debts_data', debtsData);
 
     const subSnap = await window._fbGet(window._fbChild(dbRef, userPath('subscriptions')));
     if (subSnap.exists() && subSnap.val()) {
@@ -2665,6 +3468,7 @@ function renderPlanTab() {
   // Sync total budget input
   const inp = document.getElementById('planTotalBudget');
   if (inp && !inp.matches(':focus')) inp.value = settings.monthBudget || '';
+  renderRollover();
   renderPlanDayCard();
   renderPlanOverview();
   renderPlanCats();
@@ -2716,7 +3520,7 @@ function renderPlanOverview() {
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const txMonth = getCurrentMonthSpent();
   const spent = txMonth.reduce((s, t) => s + t.amount, 0);
-  const budget = settings.monthBudget || 0;
+  const budget = activeBudget();
   const remaining = Math.max(budget - spent, 0);
   const planBudgets = getPlanBudgets();
   const totalPlanned = Object.values(planBudgets).reduce((s, v) => s + v, 0);
@@ -2803,7 +3607,7 @@ async function loadPlanAiAdvice() {
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const txMonth = getCurrentMonthSpent();
   const spent = txMonth.reduce((s, t) => s + t.amount, 0);
-  const budget = settings.monthBudget || 0;
+  const budget = activeBudget();
   const planBudgets = getPlanBudgets();
   const daysLeft = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate() - now.getDate() + 1;
   const cur = CUR();
@@ -3138,14 +3942,16 @@ function exportExcel() {
 function clearData() {
   openConfirm({
     icon: 'trash',
-    title: 'Удалить все записи и цели?',
+    title: 'Удалить все записи, цели и долги?',
     text: 'Отменить это будет нельзя. Счета и подписки останутся.',
     okText: 'Очистить',
     onOk: async () => {
       data = { transactions: [], subscriptions: data.subscriptions || [] };
       goalsData = [];
+      debtsData = [];
       await saveData();
       saveGoalsData();
+      saveDebtsData();
       refreshAll();
       renderHistory();
       showToast('Данные очищены', 'error');
@@ -3264,7 +4070,7 @@ function renderSmartWidget() {
   const byCat = {};
   txThis.forEach(t => { byCat[t.category] = (byCat[t.category] || 0) + t.amount; });
   const topCatEntry = Object.entries(byCat).sort((a, b) => b[1] - a[1])[0];
-  const topCat = topCatEntry ? CATS.find(c => c.id === topCatEntry[0]) : null;
+  const topCat = topCatEntry ? getCat(topCatEntry[0]) : null;
 
   // Month-over-month change
   const momChange = sumPrev > 0 ? Math.round((sumThis - sumPrev) / sumPrev * 100) : null;
@@ -3272,35 +4078,35 @@ function renderSmartWidget() {
   const momCls = momChange === null ? '' : momChange > 0 ? 'sw-trend-up' : 'sw-trend-down';
 
   // Budget progress
-  const budget = settings.monthBudget || 0;
+  const budget = activeBudget();
   const budgetPct = budget > 0 ? Math.min(Math.round(sumThis / budget * 100), 100) : 0;
-  const budgetColor = budgetPct < 60 ? '#6dfa9e' : budgetPct < 90 ? '#fad06d' : '#fa6d8f';
+  const budgetColor = budgetPct < 60 ? 'var(--accent3)' : budgetPct < 90 ? 'var(--accent4)' : 'var(--accent2)';
 
   const cur = CUR();
 
   el.innerHTML = `
-<div class="sw-card" style="--sw-color:#fa6d8f">
+<div class="sw-card">
   <div class="sw-icon">📅</div>
   <div class="sw-label">Этот месяц</div>
-  <div class="sw-value" style="color:#fa6d8f">${formatNum(sumThis)}</div>
+  <div class="sw-value" style="color:var(--accent2)">${formatNum(sumThis)}</div>
   <div class="sw-sub ${momCls}">${momText} vs прошлый</div>
 </div>
-<div class="sw-card" style="--sw-color:#fad06d">
+<div class="sw-card">
   <div class="sw-icon">☀️</div>
   <div class="sw-label">Сегодня</div>
-  <div class="sw-value" style="color:#fad06d">${formatNum(todaySum)}</div>
+  <div class="sw-value" style="color:var(--accent4)">${formatNum(todaySum)}</div>
   <div class="sw-sub">среднее: ${formatNum(avgDaily)} ${cur}/день</div>
 </div>
-<div class="sw-card" style="--sw-color:#7c6dfa">
+<div class="sw-card">
   <div class="sw-icon">🔮</div>
   <div class="sw-label">Прогноз на месяц</div>
-  <div class="sw-value" style="color:#7c6dfa">${formatNum(projected)}</div>
+  <div class="sw-value">${formatNum(projected)}</div>
   <div class="sw-sub">при текущем темпе</div>
 </div>
-<div class="sw-card" style="--sw-color:${topCat ? topCat.color : '#6dfad6'}">
+<div class="sw-card">
   <div class="sw-icon">${topCat ? topCat.icon : '📊'}</div>
   <div class="sw-label">Топ категория</div>
-  <div class="sw-value" style="font-size:14px;color:${topCat ? topCat.color : '#6dfad6'}">${topCat ? topCat.label : '—'}</div>
+  <div class="sw-value" style="font-size:var(--fs-3);color:${topCat ? topCat.color : 'var(--text2)'}">${topCat ? topCat.label : '—'}</div>
   <div class="sw-sub">${topCatEntry ? formatNum(topCatEntry[1]) + ' ' + cur : 'нет данных'}</div>
 </div>
 ${budget > 0 ? `
@@ -3332,6 +4138,18 @@ function toggleTheme() {
   // Save to localStorage immediately for instant apply on reload
   lsSet('expenses_settings', settings);
   saveSettingsToFirestore();
+  repaintForTheme();
+}
+
+// Data colours are picked per theme, so everything on screen must be redrawn
+function repaintForTheme() {
+  if (!currentUser) return;
+  refreshAll();
+  renderHistory();
+  if (_currentNav === 'analytics') renderAnalytics();
+  if (_currentNav === 'goals') renderGoals();
+  if (_currentNav === 'plan') renderPlanTab();
+  if (_currentNav === 'settings') { renderAccountsSettings(); renderCustomCats(); }
 }
 
 function applyTheme() {
@@ -3345,57 +4163,80 @@ function applyTheme() {
 // GROQ AI
 // ==============================
 
-// Shared key stored in Firebase at /config/groqKey (set by admin)
+// Two ways to reach Groq, in order of preference:
+//   config/groqProxy — сервер держит ключ у себя, приложение шлёт токен входа
+//   config/groqKey   — сам ключ, его видит любой вошедший пользователь
 let _groqKey = null;
+let _groqEndpoint = null;
 
-async function getGroqKey() {
-  if (_groqKey) return _groqKey;
+async function fbConfigValue(path) {
   // Wait for Firebase to be ready
   for (let i = 0; i < 20; i++) {
     if (window._fbGet && window._fbRef && window._fbDb) break;
     await new Promise(r => setTimeout(r, 200));
   }
   if (!window._fbGet || !window._fbRef || !window._fbDb) {
-    console.warn('Firebase not ready for Groq key fetch');
+    console.warn('Firebase not ready to read ' + path);
     return null;
   }
   try {
-    const snap = await window._fbGet(window._fbRef(window._fbDb, 'config/groqKey'));
-    if (snap.exists() && snap.val()) {
-      _groqKey = snap.val();
-      console.log('✅ Groq key loaded');
-      return _groqKey;
-    } else {
-      console.warn('Groq key not found at config/groqKey in Firebase');
-    }
+    const snap = await window._fbGet(window._fbRef(window._fbDb, path));
+    return snap.exists() ? snap.val() : null;
   } catch (e) {
-    console.error('Groq key error:', e.code, e.message);
+    console.error(path + ' read error:', e.code, e.message);
+    return null;
   }
-  return null;
+}
+
+async function getGroqKey() {
+  if (_groqKey) return _groqKey;
+  _groqKey = await fbConfigValue('config/groqKey');
+  if (!_groqKey) console.warn('Groq key not found at config/groqKey in Firebase');
+  return _groqKey;
+}
+
+async function getGroqEndpoint() {
+  if (_groqEndpoint) return _groqEndpoint;
+  const proxy = await fbConfigValue('config/groqProxy');
+  if (typeof proxy === 'string' && /^https:\/\//.test(proxy)) {
+    _groqEndpoint = { url: proxy.trim(), proxy: true };
+    return _groqEndpoint;
+  }
+  const key = await getGroqKey();
+  if (!key) return null;
+  _groqEndpoint = { url: 'https://api.groq.com/openai/v1/chat/completions', key };
+  return _groqEndpoint;
+}
+
+// Everything that talks to the model goes through here
+async function groqRequest(body) {
+  const ep = await getGroqEndpoint();
+  if (!ep) throw new Error('Нет ключа для ИИ. Проверь Firebase: config/groqProxy или config/groqKey');
+  const headers = { 'Content-Type': 'application/json' };
+  if (ep.proxy) {
+    // The proxy checks who is calling, so it needs the sign-in token
+    const token = currentUser && currentUser.getIdToken ? await currentUser.getIdToken() : '';
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+  } else {
+    headers['Authorization'] = 'Bearer ' + ep.key;
+  }
+  const res = await fetch(ep.url, { method: 'POST', headers, body: JSON.stringify(body) });
+  const json = await res.json().catch(() => ({ error: { message: 'HTTP ' + res.status } }));
+  if (json.error) throw new Error(json.error.message || ('HTTP ' + res.status));
+  return json;
 }
 
 async function callGroq(prompt) {
-  const key = await getGroqKey();
-  if (!key) throw new Error('Groq ключ не найден. Проверь Firebase: config/groqKey');
   // Each call is completely fresh — no history
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + key,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
-      messages: [
-        { role: 'system', content: 'Ты финансовый помощник. Отвечай кратко, по-русски, без markdown.' },
-        { role: 'user', content: prompt }
-      ],
-      max_tokens: 400,
-      temperature: 0.7
-    })
+  const json = await groqRequest({
+    model: 'llama-3.1-8b-instant',
+    messages: [
+      { role: 'system', content: 'Ты финансовый помощник. Отвечай кратко, по-русски, без markdown.' },
+      { role: 'user', content: prompt }
+    ],
+    max_tokens: 400,
+    temperature: 0.7
   });
-  const json = await res.json();
-  if (json.error) throw new Error(json.error.message);
   return json.choices?.[0]?.message?.content || '';
 }
 
@@ -3490,7 +4331,7 @@ async function loadAiInsights() {
 - Сегодня потрачено: ${formatNum(todaySum)} ${cur}
 - Среднее в день: ${formatNum(avgDaily)} ${cur}
 - Прогноз на конец месяца: ${formatNum(projected)} ${cur}
-${settings.monthBudget ? `- Бюджет: ${formatNum(settings.monthBudget)} ${cur} (использовано ${Math.round(sumThis / settings.monthBudget * 100)}%)` : ''}
+${activeBudget() ? `- Бюджет: ${formatNum(activeBudget())} ${cur} (использовано ${Math.round(sumThis / activeBudget() * 100)}%)` : ''}
 - День месяца: ${dayOfMonth} из ${daysInMonth}
 
 РАСХОДЫ ПО КАТЕГОРИЯМ:
@@ -3499,7 +4340,7 @@ ${topTx ? `\nСамая крупная трата: ${topTx.name} — ${formatNum
 
 Напиши живой, дружелюбный анализ с конкретными цифрами из данных выше. Укажи что хорошо и что можно улучшить.`;
 
-  const budgetPct = settings.monthBudget ? Math.round(sumThis / settings.monthBudget * 100) : 0;
+  const budgetPct = activeBudget() ? Math.round(sumThis / activeBudget() * 100) : 0;
   if (budgetPct >= 85) {
     document.documentElement.style.setProperty('--accent', 'var(--accent2)');
   } else {
@@ -3541,7 +4382,7 @@ function getAlerts() {
   const now = new Date();
   const cm = dateKey(now).slice(0, 7);
 
-  const budget = settings.monthBudget || 0;
+  const budget = activeBudget();
   if (budget > 0) {
     const spent = data.transactions
       .filter(t => t.date.startsWith(cm) && t.type === 'expense')
@@ -3562,15 +4403,31 @@ function getAlerts() {
     }
   }
 
+  (debtsData || []).forEach(debt => {
+    if (debt.closed) return;
+    const days = daysUntil(debt.due);
+    if (days === null || days > 3) return;
+    const lent = debt.type === 'lent';
+    alerts.push({
+      id: `debt:${debt.id}:${dateKey()}`,
+      level: days < 0 ? 'warn' : 'info',
+      icon: 'wallet',
+      title: `${lent ? 'Долг вам' : 'Ваш долг'}: ${debt.person} — ${formatNum(debtLeft(debt))} ${CUR()}`,
+      text: days < 0 ? `Просрочено на ${Math.abs(days)} дн.`
+        : days === 0 ? 'Вернуть сегодня' : `Вернуть через ${days} дн.`
+    });
+  });
+
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   (data.subscriptions || []).forEach(sub => {
     const day = Math.min(Math.max(parseInt(sub.day) || 1, 1), daysInMonth);
     const left = day - now.getDate();
     if (left >= 0 && left <= 3 && sub.lastProcessedMonth !== cm) {
+      const word = sub.type === 'income' ? 'Поступление' : 'Списание';
       alerts.push({
         id: `sub:${sub.id}:${cm}`, level: 'info', icon: 'repeat',
-        title: `${sub.name} — ${formatNum(sub.amount)} ${CUR()}`,
-        text: left === 0 ? 'Списание сегодня' : `Списание через ${left} дн.`
+        title: `${sub.name} — ${sub.type === 'income' ? '+' : ''}${formatNum(sub.amount)} ${CUR()}`,
+        text: left === 0 ? `${word} сегодня` : `${word} через ${left} дн.`
       });
     }
   });
@@ -3688,19 +4545,34 @@ function renderSubs() {
     return;
   }
   list.innerHTML = data.subscriptions.map(s => {
-    const cat = getCat(s.category);
+    const isIncome = s.type === 'income';
+    const cat = getCat(isIncome ? 'income' : s.category);
     return `<div style="display:flex;align-items:center;background:var(--surface2);padding:10px 14px;border-radius:12px;gap:10px;border:1px solid var(--border)">
   <div style="font-size:20px;width:32px;height:32px;border-radius:8px;background:${cat.color}22;display:flex;align-items:center;justify-content:center">${cat.icon}</div>
   <div style="flex:1">
     <div style="font-size:14px;font-weight:600">${escapeHtml(s.name)}</div>
     <div style="font-size:11px;color:var(--text2)">Каждое ${escapeHtml(s.day)}-е число</div>
   </div>
-  <div style="font-size:14px;font-weight:700;color:var(--accent2)">${formatNum(s.amount)} ${CUR()}</div>
+  <div style="font-size:14px;font-weight:700;color:${isIncome ? 'var(--accent3)' : 'var(--accent2)'}">${isIncome ? '+' : '−'}${formatNum(s.amount)} ${CUR()}</div>
   <button onclick="deleteSub('${s.id}')" title="Удалить платёж"
         style="background:none;border:none;color:var(--text2);cursor:pointer;padding:4px">${ic('close')}</button>
 </div>`;
   }).join('');
 }
+let subType = 'expense';
+
+// Зарплата 5-го числа — такой же регулярный платёж, только со знаком плюс
+function setSubType(type) {
+  subType = type === 'income' ? 'income' : 'expense';
+  const expBtn = document.getElementById('subTypeExpense');
+  const incBtn = document.getElementById('subTypeIncome');
+  if (expBtn) expBtn.classList.toggle('selected', subType === 'expense');
+  if (incBtn) incBtn.classList.toggle('selected', subType === 'income');
+  // Доход всегда попадает в категорию «Доход», выбирать нечего
+  const catField = document.getElementById('subCatField');
+  if (catField) catField.style.display = subType === 'income' ? 'none' : '';
+}
+
 function addSub() {
   const name = document.getElementById('subName').value.trim();
   const amt = parseFloat(document.getElementById('subAmount').value);
@@ -3714,7 +4586,9 @@ function addSub() {
   if (!data.subscriptions) data.subscriptions = [];
   data.subscriptions.push({
     id: 'sub_' + Date.now().toString(36),
-    name, amount: amt, day, category: cat,
+    name, amount: amt, day,
+    type: subType,
+    category: subType === 'income' ? 'income' : cat,
     // Charges start with the current month, never retroactively
     startMonth: dateKey().slice(0, 7),
     lastProcessedMonth: null
@@ -3725,7 +4599,8 @@ function addSub() {
   document.getElementById('subName').value = '';
   document.getElementById('subAmount').value = '';
   document.getElementById('subDay').value = '';
-  showToast('Подписка добавлена', 'success');
+  setSubType('expense');
+  showToast(subType === 'income' ? 'Регулярный доход добавлен' : 'Подписка добавлена', 'success');
   processSubscriptions();
 }
 function deleteSub(id) {
@@ -3786,15 +4661,16 @@ function processSubscriptions() {
       // Deterministic id: two devices processing the same month write the same record
       const id = `tx_sub_${subId}_${mk}`;
       if (!data.transactions.some(t => t.id === id)) {
+        const isIncome = sub.type === 'income';
         const tx = normalizeTx({
           id,
-          type: 'expense',
+          type: isIncome ? 'income' : 'expense',
           amount: sub.amount,
-          category: sub.category,
+          category: isIncome ? 'income' : sub.category,
           name: sub.name,
           account: sub.account || defaultAccountId(),
           date: `${mk}-${pad2(day)}`,
-          note: 'Автоплатеж (Подписка)'
+          note: isIncome ? 'Регулярный доход' : 'Автоплатеж (Подписка)'
         });
         if (tx) { data.transactions.push(tx); changes[id] = tx; }
       }
